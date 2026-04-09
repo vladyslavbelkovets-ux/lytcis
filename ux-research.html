@@ -8,10 +8,33 @@
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; background: #f5f5f5; color: #1a1a1a; }
 
-  /* ===== RESEARCHER VIEW ===== */
-  .researcher { max-width: 560px; margin: 60px auto; padding: 0 20px; }
-  .researcher h1 { font-size: 22px; margin-bottom: 4px; }
-  .researcher .subtitle { color: #666; font-size: 14px; margin-bottom: 32px; }
+  /* ===== SHARED ===== */
+  .container { max-width: 640px; margin: 0 auto; padding: 40px 20px; }
+  .page { display: none; }
+  .page.active { display: block; }
+
+  .top-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 32px; }
+  .top-bar h1 { font-size: 20px; flex: 1; }
+  .btn {
+    padding: 8px 16px; border: none; border-radius: 8px; font-size: 13px;
+    font-weight: 600; cursor: pointer; font-family: inherit; transition: background .15s;
+  }
+  .btn-dark { background: #1a1a1a; color: #fff; }
+  .btn-dark:hover { background: #333; }
+  .btn-outline { background: none; border: 1px solid #d0d0d0; color: #555; }
+  .btn-outline:hover { background: #f0f0f0; }
+  .btn-icon { width: 36px; height: 36px; padding: 0; display: flex; align-items: center; justify-content: center; border-radius: 8px; background: none; border: 1px solid #d0d0d0; cursor: pointer; color: #666; }
+  .btn-icon:hover { background: #f0f0f0; }
+  .btn-icon svg { width: 18px; height: 18px; }
+  .btn-back { display: inline-flex; align-items: center; gap: 4px; background: none; border: none; color: #666; font-size: 13px; cursor: pointer; padding: 4px 0; font-family: inherit; margin-bottom: 16px; }
+  .btn-back:hover { color: #1a1a1a; }
+  .btn-primary {
+    width: 100%; padding: 12px; background: #1a1a1a; color: #fff; border: none; border-radius: 8px;
+    font-size: 15px; font-weight: 600; cursor: pointer; transition: background .15s;
+  }
+  .btn-primary:hover { background: #333; }
+  .btn-primary:disabled { opacity: .5; cursor: not-allowed; }
+
   .field { margin-bottom: 20px; }
   .field label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: #333; }
   .field .hint { font-size: 12px; color: #888; margin-bottom: 6px; }
@@ -20,12 +43,10 @@
     font-size: 14px; font-family: inherit; background: #fff; transition: border-color .15s;
   }
   .field input:focus, .field textarea:focus { outline: none; border-color: #4a90d9; }
-  .btn-primary {
-    width: 100%; padding: 12px; background: #1a1a1a; color: #fff; border: none; border-radius: 8px;
-    font-size: 15px; font-weight: 600; cursor: pointer; transition: background .15s;
-  }
-  .btn-primary:hover { background: #333; }
-  .btn-primary:disabled { opacity: .5; cursor: not-allowed; }
+
+  .empty-state { text-align: center; padding: 60px 20px; color: #888; }
+  .empty-state p { margin-bottom: 16px; font-size: 14px; }
+
   .result-box { margin-top: 20px; display: none; }
   .result-box.visible { display: block; }
   .result-box label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
@@ -36,12 +57,63 @@
     font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap;
   }
   .btn-copy:hover { background: #333; }
-  .tg-section { border: 1px solid #e0e0e0; border-radius: 10px; padding: 16px; margin-bottom: 20px; background: #fafafa; }
-  .tg-section summary { font-size: 13px; font-weight: 600; cursor: pointer; color: #333; }
-  .tg-section .tg-fields { margin-top: 12px; }
-  .tg-section .tg-fields .field { margin-bottom: 12px; }
-  .tg-section .tg-fields .field:last-child { margin-bottom: 0; }
 
+  /* ===== SETTINGS ===== */
+  .setup-card {
+    background: #fff; border-radius: 16px; padding: 32px; max-width: 560px; margin: 60px auto;
+    box-shadow: 0 4px 24px rgba(0,0,0,.06);
+  }
+  .setup-card h2 { font-size: 18px; margin-bottom: 4px; }
+  .setup-card .subtitle { font-size: 13px; color: #666; margin-bottom: 24px; }
+  .setup-code {
+    font-size: 11px; font-family: 'SF Mono', Monaco, monospace; background: #1a1a1a; color: #e0e0e0;
+    padding: 12px; border-radius: 8px; overflow-x: auto; white-space: pre; margin-bottom: 16px;
+    max-height: 240px; overflow-y: auto; line-height: 1.5;
+  }
+  .setup-step { font-size: 13px; color: #444; margin-bottom: 12px; line-height: 1.6; }
+  .setup-step strong { color: #1a1a1a; }
+  .setup-step code { background: #f0f0f0; padding: 1px 5px; border-radius: 3px; font-size: 12px; }
+  .setup-toggle { font-size: 12px; cursor: pointer; color: #4a90d9; background: none; border: none; margin-bottom: 8px; font-family: inherit; }
+  .setup-toggle:hover { text-decoration: underline; }
+
+  /* ===== DASHBOARD ===== */
+  .test-card {
+    background: #fff; border: 1px solid #e0e0e0; border-radius: 12px;
+    padding: 16px 20px; margin-bottom: 10px; cursor: pointer; transition: border-color .15s;
+    display: flex; align-items: center; gap: 16px;
+  }
+  .test-card:hover { border-color: #999; }
+  .test-card .tc-info { flex: 1; min-width: 0; }
+  .test-card .tc-name { font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .test-card .tc-url { font-size: 12px; color: #888; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+  .test-card .tc-meta { font-size: 12px; color: #888; margin-top: 4px; }
+  .test-card .tc-count { flex-shrink: 0; font-size: 13px; color: #666; background: #f0f0f0; padding: 4px 12px; border-radius: 100px; white-space: nowrap; }
+
+  /* ===== TEST DETAIL ===== */
+  .detail-header { margin-bottom: 24px; }
+  .detail-header h2 { font-size: 18px; margin-bottom: 4px; }
+  .detail-header .detail-url { font-size: 13px; color: #888; word-break: break-all; }
+  .detail-tasks { margin-bottom: 24px; padding: 16px; background: #fff; border-radius: 10px; border: 1px solid #e0e0e0; }
+  .detail-tasks h3 { font-size: 13px; font-weight: 600; margin-bottom: 10px; color: #555; }
+  .detail-task-item { font-size: 13px; padding: 4px 0; color: #444; }
+  .detail-task-item .dt-type { display: inline-block; font-size: 10px; font-weight: 700; text-transform: uppercase; padding: 2px 6px; border-radius: 4px; color: #fff; margin-right: 6px; }
+  .dt-type.t-task { background: #2979ff; }
+  .dt-type.t-verbal { background: #ab47bc; }
+  .dt-type.t-input { background: #ef6c00; }
+  .dt-type.t-scenario { background: #00897b; }
+
+  .detail-actions { display: flex; gap: 8px; margin-bottom: 24px; flex-wrap: wrap; }
+
+  .responses-title { font-size: 14px; font-weight: 600; color: #555; margin-bottom: 12px; }
+
+  .response-card { background: #fff; border: 1px solid #e0e0e0; border-radius: 12px; padding: 16px 20px; margin-bottom: 12px; }
+  .response-card .rc-date { font-size: 12px; color: #888; margin-bottom: 10px; }
+  .response-card video { width: 100%; border-radius: 8px; margin-bottom: 10px; background: #000; }
+  .response-card .rc-answer { font-size: 13px; margin-bottom: 6px; }
+  .response-card .rc-answer .rc-q { color: #888; }
+  .response-card .rc-answer .rc-a { color: #1a1a1a; font-weight: 500; }
+
+  /* ===== TASK BUILDER ===== */
   .task-list { margin-bottom: 16px; }
   .task-item {
     display: flex; gap: 8px; align-items: center; margin-bottom: 8px;
@@ -67,8 +139,6 @@
   .btn-add-task:hover { border-color: #999; color: #555; }
 
   /* ===== RESPONDENT VIEW ===== */
-  .respondent { display: none; }
-
   .overlay {
     position: fixed; z-index: 10000;
     top: 20px; left: 50%; transform: translateX(-50%);
@@ -92,7 +162,6 @@
   @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: .3; } }
   .overlay-drag .spacer { flex: 1; }
   .task-counter { font-size: 12px; color: #777; }
-
   .overlay-body { padding: 14px 16px 16px; }
   .task-badge {
     display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px;
@@ -123,7 +192,6 @@
   .btn-next:hover { background: #e0e0e0; }
   .btn-finish { background: #e53935; color: #fff; }
   .btn-finish:hover { background: #c62828; }
-
   .test-frame { position: fixed; inset: 0; border: none; width: 100%; height: 100%; z-index: 1; }
 
   .welcome-screen, .closed-screen {
@@ -157,60 +225,141 @@
 </head>
 <body>
 
-<!-- ===== RESEARCHER VIEW (Ukrainian) ===== -->
-<div class="researcher" id="researcher">
-  <h1>UX Research Tool</h1>
-  <p class="subtitle">Немодероване юзабіліті-тестування. Без бекенду, без реєстрації.</p>
+<!-- ===== SETUP (first time) ===== -->
+<div class="page" id="pageSetup">
+  <div class="setup-card">
+    <h2>Supabase Setup</h2>
+    <p class="subtitle">Одноразове налаштування. Дані зберігатимуться у вашому Supabase проекті.</p>
 
-  <div class="field">
-    <label>URL для тестування</label>
-    <div class="hint">Figma-прототип, внутрішній сайт тощо.</div>
-    <input type="url" id="testUrl" placeholder="https://your-site.com/prototype">
-  </div>
+    <div class="setup-step"><strong>1.</strong> Створіть проект на <a href="https://supabase.com/dashboard" target="_blank">supabase.com</a></div>
+    <div class="setup-step"><strong>2.</strong> Відкрийте <strong>SQL Editor</strong> і виконайте цей запит:</div>
+    <button class="setup-toggle" id="toggleSql">Показати SQL</button>
+    <div class="setup-code" id="sqlBlock" style="display:none;">-- Tables
+create table tests (
+  id uuid primary key default gen_random_uuid(),
+  name text,
+  url text not null,
+  tasks jsonb not null,
+  respondent_limit int,
+  created_at timestamptz default now()
+);
 
-  <div class="field">
-    <label>Завдання</label>
-    <div class="hint">Task — взаємодія з інтерфейсом. Verbal — озвучити думки. Input — текстова відповідь. Scenario — текст/інструкція для респондента.</div>
-    <div class="task-list" id="taskList"></div>
-    <button class="btn-add-task" id="addTaskBtn">+ Додати завдання</button>
-  </div>
+create table responses (
+  id uuid primary key default gen_random_uuid(),
+  test_id uuid references tests(id),
+  video_path text,
+  answers jsonb,
+  created_at timestamptz default now()
+);
 
-  <div class="field">
-    <label>Ліміт респондентів</label>
-    <div class="hint">Після досягнення ліміту посилання перестане працювати. Залиште порожнім для необмеженого доступу.</div>
-    <input type="number" id="respondentLimit" min="1" placeholder="Напр. 10">
-  </div>
+-- RLS
+alter table tests enable row level security;
+alter table responses enable row level security;
 
-  <details class="tg-section">
-    <summary>Telegram — автоотримання запису (опціонально)</summary>
-    <div class="tg-fields">
-      <div class="field">
-        <label>Bot Token</label>
-        <div class="hint">Створіть бота через @BotFather і вставте токен</div>
-        <input type="text" id="tgToken" placeholder="123456789:ABCdefGHIjklMNOpqrsTUVwxyz">
-      </div>
-      <div class="field">
-        <label>Chat ID</label>
-        <div class="hint">Напишіть боту /start, потім дізнайтесь ID через @userinfobot</div>
-        <input type="text" id="tgChat" placeholder="123456789">
-      </div>
+create policy "read tests" on tests
+  for select using (true);
+create policy "create tests" on tests
+  for insert with check (true);
+create policy "read responses" on responses
+  for select using (true);
+create policy "create responses" on responses
+  for insert with check (true);
+
+-- Storage (run in SQL editor)
+insert into storage.buckets (id, name, public)
+  values ('videos', 'videos', true);
+
+create policy "upload videos"
+  on storage.objects for insert
+  with check (bucket_id = 'videos');
+create policy "read videos"
+  on storage.objects for select
+  using (bucket_id = 'videos');</div>
+
+    <div class="setup-step"><strong>3.</strong> Скопіюйте <strong>Project URL</strong> та <strong>anon key</strong> з <code>Settings → API</code></div>
+
+    <div class="field">
+      <label>Project URL</label>
+      <input type="url" id="setupUrl" placeholder="https://xxxxx.supabase.co">
     </div>
-  </details>
+    <div class="field">
+      <label>Anon Key</label>
+      <input type="text" id="setupKey" placeholder="eyJhbGciOi...">
+    </div>
+    <button class="btn-primary" id="setupConnect">Підключити</button>
+    <div id="setupError" style="color:#e53935;font-size:13px;margin-top:12px;display:none;"></div>
+  </div>
+</div>
 
-  <button class="btn-primary" id="generateBtn">Згенерувати посилання</button>
+<!-- ===== DASHBOARD ===== -->
+<div class="page" id="pageDashboard">
+  <div class="container">
+    <div class="top-bar">
+      <h1>UX Research</h1>
+      <button class="btn btn-dark" id="btnNewTest">+ Новий тест</button>
+      <button class="btn-icon" id="btnSettings" title="Налаштування"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
+    </div>
+    <div id="testListContainer"></div>
+  </div>
+</div>
 
-  <div class="result-box" id="resultBox">
-    <label>Посилання для респондента</label>
-    <div class="result-link-row">
-      <input type="text" id="resultLink" readonly>
-      <button class="btn-copy" id="copyBtn">Копіювати</button>
+<!-- ===== CREATE TEST ===== -->
+<div class="page" id="pageCreate">
+  <div class="container">
+    <button class="btn-back" id="backFromCreate">&larr; Назад</button>
+    <h2 style="font-size:18px;margin-bottom:24px;">Новий тест</h2>
+
+    <div class="field">
+      <label>Назва тесту</label>
+      <input type="text" id="testName" placeholder="Напр. Тест головної сторінки v2">
+    </div>
+    <div class="field">
+      <label>URL для тестування</label>
+      <div class="hint">Figma-прототип, внутрішній сайт тощо.</div>
+      <input type="url" id="testUrl" placeholder="https://your-site.com/prototype">
+    </div>
+    <div class="field">
+      <label>Завдання</label>
+      <div class="hint">Task — взаємодія з інтерфейсом. Verbal — озвучити думки. Input — текстова відповідь. Scenario — інструкція.</div>
+      <div class="task-list" id="taskList"></div>
+      <button class="btn-add-task" id="addTaskBtn">+ Додати завдання</button>
+    </div>
+    <div class="field">
+      <label>Ліміт респондентів</label>
+      <div class="hint">Залиште порожнім для необмеженого доступу.</div>
+      <input type="number" id="respondentLimit" min="1" placeholder="Напр. 10">
+    </div>
+
+    <button class="btn-primary" id="createBtn">Створити тест</button>
+    <div class="result-box" id="createResult">
+      <label>Посилання для респондента</label>
+      <div class="result-link-row">
+        <input type="text" id="createLink" readonly>
+        <button class="btn-copy" id="createCopy">Копіювати</button>
+      </div>
     </div>
   </div>
 </div>
 
-<!-- ===== RESPONDENT VIEW (English) ===== -->
-<div class="respondent" id="respondent">
+<!-- ===== TEST DETAIL ===== -->
+<div class="page" id="pageDetail">
+  <div class="container">
+    <button class="btn-back" id="backFromDetail">&larr; Назад</button>
+    <div class="detail-header">
+      <h2 id="detailName"></h2>
+      <div class="detail-url" id="detailUrl"></div>
+    </div>
+    <div class="detail-tasks" id="detailTasks"></div>
+    <div class="detail-actions">
+      <button class="btn btn-dark" id="detailCopyLink">Копіювати посилання</button>
+    </div>
+    <div class="responses-title" id="responsesTitle"></div>
+    <div id="responsesList"></div>
+  </div>
+</div>
 
+<!-- ===== RESPONDENT VIEW (English) ===== -->
+<div class="page" id="pageRespondent">
   <div class="welcome-screen" id="welcomeScreen">
     <div class="welcome-card">
       <h2>Usability Test</h2>
@@ -223,14 +372,12 @@
       <button class="btn-start" id="startBtn">Start</button>
     </div>
   </div>
-
   <div class="closed-screen" id="closedScreen">
     <div class="closed-card">
       <h2>Test Closed</h2>
       <p>We've reached the maximum number of participants. Thank you for your interest!</p>
     </div>
   </div>
-
   <div class="done-screen" id="doneScreen">
     <div class="done-card">
       <h2>Thank you!</h2>
@@ -238,14 +385,10 @@
       <div class="upload-status" id="uploadStatus"></div>
     </div>
   </div>
-
   <div class="overlay" id="overlay" style="display:none;">
     <div class="overlay-drag" id="overlayDrag">
       <div class="drag-dots"><span><i></i><i></i></span><span><i></i><i></i></span><span><i></i><i></i></span></div>
-      <div class="rec-indicator">
-        <div class="rec-dot idle" id="recDot"></div>
-        <span id="timer">00:00</span>
-      </div>
+      <div class="rec-indicator"><div class="rec-dot idle" id="recDot"></div><span id="timer">00:00</span></div>
       <div class="spacer"></div>
       <span class="task-counter" id="taskNumber"></span>
     </div>
@@ -259,7 +402,6 @@
       </div>
     </div>
   </div>
-
   <iframe class="test-frame" id="testFrame" allow="camera; microphone; fullscreen; autoplay; clipboard-write"></iframe>
 </div>
 
@@ -267,11 +409,85 @@
 (function() {
   'use strict';
 
-  var ICON_TASK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 15l-2 5L9 9l11 4-5 2z"/><path d="M22 22l-5-5"/></svg>';
-  var ICON_VERBAL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>';
-  var ICON_INPUT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 10H3"/><path d="M21 6H3"/><path d="M21 14H3"/><path d="M17 18H3"/></svg>';
-  var ICON_SCENARIO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>';
+  // ===== SUPABASE HELPERS =====
+  var SB = {
+    url: null, key: null,
+    init: function() {
+      try {
+        var c = JSON.parse(localStorage.getItem('uxr_sb') || '{}');
+        this.url = c.url || null;
+        this.key = c.key || null;
+      } catch(e) {}
+    },
+    save: function(url, key) {
+      this.url = url; this.key = key;
+      localStorage.setItem('uxr_sb', JSON.stringify({ url: url, key: key }));
+    },
+    configured: function() { return this.url && this.key; },
+    headers: function(extra) {
+      var h = { 'apikey': this.key, 'Authorization': 'Bearer ' + this.key, 'Content-Type': 'application/json' };
+      if (extra) for (var k in extra) h[k] = extra[k];
+      return h;
+    },
+    async get(path) {
+      var r = await fetch(this.url + path, { headers: this.headers() });
+      if (!r.ok) throw new Error(await r.text());
+      return r.json();
+    },
+    async post(path, body, extraHeaders) {
+      var r = await fetch(this.url + path, {
+        method: 'POST', headers: this.headers(Object.assign({ 'Prefer': 'return=representation' }, extraHeaders || {})),
+        body: JSON.stringify(body)
+      });
+      if (!r.ok) throw new Error(await r.text());
+      return r.json();
+    },
+    async upload(path, blob) {
+      var r = await fetch(this.url + '/storage/v1/object/videos/' + path, {
+        method: 'POST',
+        headers: { 'apikey': this.key, 'Authorization': 'Bearer ' + this.key, 'Content-Type': blob.type || 'video/webm' },
+        body: blob
+      });
+      if (!r.ok) throw new Error(await r.text());
+      return this.url + '/storage/v1/object/public/videos/' + path;
+    },
+    videoUrl: function(path) { return this.url + '/storage/v1/object/public/videos/' + path; }
+  };
 
+  // Also support external SB creds (for respondent links)
+  function sbFrom(url, key) {
+    return {
+      headers: function(extra) {
+        var h = { 'apikey': key, 'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json' };
+        if (extra) for (var k in extra) h[k] = extra[k];
+        return h;
+      },
+      async get(path) {
+        var r = await fetch(url + path, { headers: this.headers() });
+        if (!r.ok) throw new Error(await r.text());
+        return r.json();
+      },
+      async post(path, body, extraHeaders) {
+        var r = await fetch(url + path, {
+          method: 'POST', headers: this.headers(Object.assign({ 'Prefer': 'return=representation' }, extraHeaders || {})),
+          body: JSON.stringify(body)
+        });
+        if (!r.ok) throw new Error(await r.text());
+        return r.json();
+      },
+      async upload(path, blob) {
+        var r = await fetch(url + '/storage/v1/object/videos/' + path, {
+          method: 'POST',
+          headers: { 'apikey': key, 'Authorization': 'Bearer ' + key, 'Content-Type': blob.type || 'video/webm' },
+          body: blob
+        });
+        if (!r.ok) throw new Error(await r.text());
+        return url + '/storage/v1/object/public/videos/' + path;
+      }
+    };
+  }
+
+  // ===== CONFIG ENCODING =====
   function encodeConfig(obj) {
     return btoa(unescape(encodeURIComponent(JSON.stringify(obj)))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
   }
@@ -281,10 +497,11 @@
     return JSON.parse(decodeURIComponent(escape(atob(str))));
   }
 
-  var hash = location.hash.slice(1), config = null;
-  if (hash) { try { config = decodeConfig(hash); } catch(e) {} }
-  if (config && config.url && config.tasks && config.tasks.length) initRespondent(config);
-  else initResearcher();
+  // ===== ICONS =====
+  var ICON_TASK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="15 15l-2 5L9 9l11 4-5 2z"/><path d="M22 22l-5-5"/></svg>';
+  var ICON_VERBAL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>';
+  var ICON_INPUT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 10H3"/><path d="M21 6H3"/><path d="M21 14H3"/><path d="M17 18H3"/></svg>';
+  var ICON_SCENARIO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>';
 
   // ===== DRAG =====
   function makeDraggable(el, handle) {
@@ -316,70 +533,178 @@
     }
   }
 
-  // ===== COUNTER (via Telegram message count) =====
-  // Sends a "session start" message. Stores its message_id.
-  // Each respondent sends a "join" message, gets its message_id.
-  // Difference = number of messages since session start = approximate respondent count.
-  // Uses a dedicated "counter chat" (same as recording chat).
-  async function createCounter(tg, limit) {
-    try {
-      var fd = new FormData();
-      fd.append('chat_id', tg.chat);
-      fd.append('text', '🔬 UX Research session started. Limit: ' + limit + ' respondents.');
-      var r = await fetch('https://api.telegram.org/bot' + tg.token + '/sendMessage', { method: 'POST', body: fd });
-      if (!r.ok) return null;
-      var data = await r.json();
-      return data.result ? data.result.message_id : null;
-    } catch(e) { return null; }
+  // ===== ROUTING =====
+  function showPage(id) {
+    document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
+    document.getElementById(id).classList.add('active');
+    document.body.style.background = id === 'pageRespondent' ? '#fff' : '#f5f5f5';
   }
 
-  async function checkLimit(tg, baseMessageId, limit) {
-    try {
-      // Send a probe message to get current message_id
-      var fd = new FormData();
-      fd.append('chat_id', tg.chat);
-      fd.append('text', '📋 Respondent checking in…');
-      var r = await fetch('https://api.telegram.org/bot' + tg.token + '/sendMessage', { method: 'POST', body: fd });
-      if (!r.ok) return { allowed: true };
-      var data = await r.json();
-      var currentMsgId = data.result.message_id;
+  SB.init();
 
-      // Delete the probe message to keep chat clean
-      var fd2 = new FormData();
-      fd2.append('chat_id', tg.chat);
-      fd2.append('message_id', currentMsgId);
-      fetch('https://api.telegram.org/bot' + tg.token + '/deleteMessage', { method: 'POST', body: fd2 });
-
-      // Each respondent session generates ~2 messages (probe + recording).
-      // So real respondent count ≈ (currentMsgId - baseMessageId) / 2
-      // But to be safe, we use a simple formula:
-      // Messages since session = currentMsgId - baseMessageId - 1 (exclude our probe)
-      var messagesSince = currentMsgId - baseMessageId - 1;
-      // Each completed respondent = 1 recording message. Probes are deleted.
-      // So messagesSince ≈ number of completed respondents.
-      // But probes from blocked respondents are also deleted, so this overcounts slightly.
-      // Use a conservative multiplier: allow if messagesSince < limit * 2
-      // Actually simplest: just count raw messages and use limit as-is.
-      // The researcher can set a slightly higher limit to compensate.
-      return { allowed: messagesSince < limit };
-    } catch(e) { return { allowed: true }; }
+  // Check if respondent link
+  var hash = location.hash.slice(1), respondentConfig = null;
+  if (hash) { try { respondentConfig = decodeConfig(hash); } catch(e) {} }
+  if (respondentConfig && respondentConfig.t && respondentConfig.s) {
+    initRespondent(respondentConfig);
+  } else {
+    initResearcher();
   }
 
   // ===== RESEARCHER =====
   function initResearcher() {
-    document.getElementById('researcher').style.display = 'block';
-    document.getElementById('respondent').style.display = 'none';
-    var taskList = document.getElementById('taskList');
+    if (!SB.configured()) { showPage('pageSetup'); initSetup(); return; }
+    showPage('pageDashboard');
+    loadDashboard();
+    initCreatePage();
 
-    // Restore saved Telegram credentials
-    try {
-      var savedTg = JSON.parse(localStorage.getItem('uxr_tg') || '{}');
-      if (savedTg.token) document.getElementById('tgToken').value = savedTg.token;
-      if (savedTg.chat) document.getElementById('tgChat').value = savedTg.chat;
-      if (savedTg.token || savedTg.chat) {
-        document.querySelector('.tg-section').open = true;
+    document.getElementById('btnNewTest').addEventListener('click', function() { showPage('pageCreate'); });
+    document.getElementById('backFromCreate').addEventListener('click', function() { showPage('pageDashboard'); loadDashboard(); });
+    document.getElementById('backFromDetail').addEventListener('click', function() { showPage('pageDashboard'); loadDashboard(); });
+    document.getElementById('btnSettings').addEventListener('click', function() { showPage('pageSetup'); initSetup(); });
+  }
+
+  // ===== SETUP =====
+  function initSetup() {
+    var urlEl = document.getElementById('setupUrl');
+    var keyEl = document.getElementById('setupKey');
+    var errEl = document.getElementById('setupError');
+    if (SB.url) urlEl.value = SB.url;
+    if (SB.key) keyEl.value = SB.key;
+
+    document.getElementById('toggleSql').onclick = function() {
+      var b = document.getElementById('sqlBlock');
+      b.style.display = b.style.display === 'none' ? 'block' : 'none';
+      this.textContent = b.style.display === 'none' ? 'Показати SQL' : 'Сховати SQL';
+    };
+
+    document.getElementById('setupConnect').onclick = async function() {
+      var url = urlEl.value.trim().replace(/\/$/, '');
+      var key = keyEl.value.trim();
+      if (!url || !key) { errEl.textContent = 'Заповніть обидва поля'; errEl.style.display = 'block'; return; }
+
+      errEl.style.display = 'none';
+      this.disabled = true; this.textContent = 'Перевірка…';
+      try {
+        var r = await fetch(url + '/rest/v1/tests?select=id&limit=1', {
+          headers: { 'apikey': key, 'Authorization': 'Bearer ' + key }
+        });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        SB.save(url, key);
+        showPage('pageDashboard');
+        loadDashboard();
+        initCreatePage();
+        document.getElementById('btnNewTest').addEventListener('click', function() { showPage('pageCreate'); });
+        document.getElementById('backFromCreate').addEventListener('click', function() { showPage('pageDashboard'); loadDashboard(); });
+        document.getElementById('backFromDetail').addEventListener('click', function() { showPage('pageDashboard'); loadDashboard(); });
+        document.getElementById('btnSettings').addEventListener('click', function() { showPage('pageSetup'); initSetup(); });
+      } catch(e) {
+        errEl.textContent = 'Не вдалось підключитись: ' + e.message;
+        errEl.style.display = 'block';
       }
-    } catch(e) {}
+      this.disabled = false; this.textContent = 'Підключити';
+    };
+  }
+
+  // ===== DASHBOARD =====
+  async function loadDashboard() {
+    var container = document.getElementById('testListContainer');
+    container.innerHTML = '<div style="text-align:center;padding:40px;color:#888;">Завантаження…</div>';
+    try {
+      var tests = await SB.get('/rest/v1/tests?select=*&order=created_at.desc');
+      var responses = await SB.get('/rest/v1/responses?select=test_id');
+      var countMap = {};
+      responses.forEach(function(r) { countMap[r.test_id] = (countMap[r.test_id] || 0) + 1; });
+
+      if (!tests.length) {
+        container.innerHTML = '<div class="empty-state"><p>Ще немає тестів</p><button class="btn btn-dark" onclick="document.getElementById(\'btnNewTest\').click()">Створити перший тест</button></div>';
+        return;
+      }
+
+      container.innerHTML = '';
+      tests.forEach(function(test) {
+        var count = countMap[test.id] || 0;
+        var date = new Date(test.created_at).toLocaleDateString('uk-UA', { day: 'numeric', month: 'long', year: 'numeric' });
+        var card = document.createElement('div');
+        card.className = 'test-card';
+        card.innerHTML =
+          '<div class="tc-info">' +
+            '<div class="tc-name">' + esc(test.name || 'Без назви') + '</div>' +
+            '<div class="tc-url">' + esc(test.url) + '</div>' +
+            '<div class="tc-meta">' + date + (test.respondent_limit ? ' · ліміт: ' + test.respondent_limit : '') + '</div>' +
+          '</div>' +
+          '<div class="tc-count">' + count + ' відп.</div>';
+        card.addEventListener('click', function() { openTestDetail(test, count); });
+        container.appendChild(card);
+      });
+    } catch(e) {
+      container.innerHTML = '<div style="text-align:center;padding:40px;color:#e53935;">Помилка: ' + esc(e.message) + '</div>';
+    }
+  }
+
+  function esc(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+  // ===== TEST DETAIL =====
+  async function openTestDetail(test, initialCount) {
+    showPage('pageDetail');
+    document.getElementById('detailName').textContent = test.name || 'Без назви';
+    document.getElementById('detailUrl').textContent = test.url;
+
+    var tasksHtml = '<h3>Завдання (' + test.tasks.length + ')</h3>';
+    test.tasks.forEach(function(t, i) {
+      tasksHtml += '<div class="detail-task-item"><span class="dt-type t-' + t.type + '">' + t.type + '</span>' + esc(t.text) + '</div>';
+    });
+    document.getElementById('detailTasks').innerHTML = tasksHtml;
+
+    // Copy link
+    document.getElementById('detailCopyLink').onclick = function() {
+      var cfg = { t: test.id, s: SB.url, k: SB.key };
+      var link = location.origin + location.pathname + '#' + encodeConfig(cfg);
+      navigator.clipboard.writeText(link).then(function() {
+        var btn = document.getElementById('detailCopyLink');
+        btn.textContent = 'Скопійовано!';
+        setTimeout(function() { btn.textContent = 'Копіювати посилання'; }, 2000);
+      });
+    };
+
+    // Load responses
+    var list = document.getElementById('responsesList');
+    document.getElementById('responsesTitle').textContent = 'Відповіді (' + (initialCount || 0) + ')';
+    list.innerHTML = '<div style="text-align:center;padding:20px;color:#888;">Завантаження…</div>';
+    try {
+      var responses = await SB.get('/rest/v1/responses?test_id=eq.' + test.id + '&select=*&order=created_at.desc');
+      document.getElementById('responsesTitle').textContent = 'Відповіді (' + responses.length + ')';
+      if (!responses.length) {
+        list.innerHTML = '<div class="empty-state"><p>Ще немає відповідей</p></div>';
+        return;
+      }
+      list.innerHTML = '';
+      responses.forEach(function(resp) {
+        var card = document.createElement('div');
+        card.className = 'response-card';
+        var date = new Date(resp.created_at).toLocaleString('uk-UA', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
+        var html = '<div class="rc-date">' + date + '</div>';
+        if (resp.video_path) {
+          html += '<video controls preload="metadata" src="' + SB.videoUrl(resp.video_path) + '"></video>';
+        }
+        if (resp.answers && Object.keys(resp.answers).length) {
+          Object.keys(resp.answers).forEach(function(k) {
+            var a = resp.answers[k];
+            html += '<div class="rc-answer"><span class="rc-q">' + esc(a.q) + '</span><br><span class="rc-a">' + esc(a.a) + '</span></div>';
+          });
+        }
+        card.innerHTML = html;
+        list.appendChild(card);
+      });
+    } catch(e) {
+      list.innerHTML = '<div style="color:#e53935;padding:16px;">Помилка: ' + esc(e.message) + '</div>';
+    }
+  }
+
+  // ===== CREATE TEST =====
+  function initCreatePage() {
+    var taskList = document.getElementById('taskList');
+    taskList.innerHTML = '';
 
     function addTaskRow(type, text) {
       var item = document.createElement('div');
@@ -395,10 +720,11 @@
     }
 
     addTaskRow('task', '');
-    document.getElementById('addTaskBtn').addEventListener('click', function() { addTaskRow('task', ''); });
+    document.getElementById('addTaskBtn').onclick = function() { addTaskRow('task', ''); };
 
-    document.getElementById('generateBtn').addEventListener('click', async function() {
+    document.getElementById('createBtn').onclick = async function() {
       var btn = this;
+      var name = document.getElementById('testName').value.trim();
       var url = document.getElementById('testUrl').value.trim();
       if (!url) { alert('Введіть URL для тестування'); return; }
 
@@ -409,47 +735,38 @@
       }
       if (!tasks.length) { alert('Додайте хоча б одне завдання'); return; }
 
-      var cfg = { url: url, tasks: tasks };
-      var tgToken = document.getElementById('tgToken').value.trim();
-      var tgChat = document.getElementById('tgChat').value.trim();
-      if (tgToken && tgChat) {
-        cfg.tg = { token: tgToken, chat: tgChat };
-        try { localStorage.setItem('uxr_tg', JSON.stringify({ token: tgToken, chat: tgChat })); } catch(e) {}
+      var limitVal = parseInt(document.getElementById('respondentLimit').value) || null;
+
+      btn.disabled = true; btn.textContent = 'Створення…';
+      try {
+        var result = await SB.post('/rest/v1/tests', {
+          name: name || url.replace(/^https?:\/\//, '').slice(0, 40),
+          url: url, tasks: tasks, respondent_limit: limitVal
+        });
+        var test = result[0];
+        var cfg = { t: test.id, s: SB.url, k: SB.key };
+        var link = location.origin + location.pathname + '#' + encodeConfig(cfg);
+        document.getElementById('createLink').value = link;
+        document.getElementById('createResult').classList.add('visible');
+      } catch(e) {
+        alert('Помилка: ' + e.message);
       }
+      btn.disabled = false; btn.textContent = 'Створити тест';
+    };
 
-      var limitVal = parseInt(document.getElementById('respondentLimit').value);
-      if (limitVal > 0) {
-        if (!cfg.tg) { alert('Для ліміту респондентів потрібно налаштувати Telegram.'); return; }
-        btn.disabled = true; btn.textContent = 'Створюємо лічильник…';
-        var msgId = await createCounter(cfg.tg, limitVal);
-        if (msgId) { cfg.counterMsgId = msgId; cfg.limit = limitVal; }
-        else alert('Не вдалось створити лічильник. Посилання буде без ліміту.');
-        btn.disabled = false; btn.textContent = 'Згенерувати посилання';
-      }
-
-      var link = location.origin + location.pathname + '#' + encodeConfig(cfg);
-      if (link.length > 8000) { alert('Посилання занадто довге. Скоротіть текст завдань.'); return; }
-      document.getElementById('resultLink').value = link;
-      document.getElementById('resultBox').classList.add('visible');
-    });
-
-    document.getElementById('copyBtn').addEventListener('click', function() {
+    document.getElementById('createCopy').onclick = function() {
       var btn = this;
-      navigator.clipboard.writeText(document.getElementById('resultLink').value).then(function() {
-        btn.textContent = 'Скопійовано!'; setTimeout(function() { btn.textContent = 'Копіювати'; }, 2000);
+      navigator.clipboard.writeText(document.getElementById('createLink').value).then(function() {
+        btn.textContent = 'Скопійовано!';
+        setTimeout(function() { btn.textContent = 'Копіювати'; }, 2000);
       });
-    });
+    };
   }
 
   // ===== RESPONDENT =====
   function initRespondent(cfg) {
-    document.getElementById('researcher').style.display = 'none';
-    document.getElementById('respondent').style.display = 'block';
-    document.body.style.background = '#fff';
-
-    var tasks = cfg.tasks, currentTask = 0, recorder = null, chunks = [], timerInterval = null, startTime = 0;
-    var inputAnswers = {};
-
+    showPage('pageRespondent');
+    var sb = sbFrom(cfg.s, cfg.k);
     var $ = function(id) { return document.getElementById(id); };
     var welcomeScreen = $('welcomeScreen'), closedScreen = $('closedScreen'), doneScreen = $('doneScreen');
     var overlay = $('overlay'), testFrame = $('testFrame'), startBtn = $('startBtn');
@@ -457,16 +774,29 @@
     var taskText = $('taskText'), taskBadge = $('taskBadge'), overlayInput = $('overlayInput');
     var timerEl = $('timer'), recDot = $('recDot'), uploadStatus = $('uploadStatus');
 
+    var tasks = [], currentTask = 0, recorder = null, chunks = [], timerInterval = null, startTime = 0;
+    var inputAnswers = {}, testData = null;
+
     makeDraggable(overlay, $('overlayDrag'));
 
-    // Check limit
-    if (cfg.counterMsgId && cfg.tg && cfg.limit) {
-      checkLimit(cfg.tg, cfg.counterMsgId, cfg.limit).then(function(r) {
-        if (r.allowed) showWelcome(); else closedScreen.style.display = 'flex';
-      });
-    } else {
-      showWelcome();
-    }
+    // Fetch test data
+    sb.get('/rest/v1/tests?id=eq.' + cfg.t + '&select=*').then(function(rows) {
+      if (!rows.length) { closedScreen.style.display = 'flex'; return; }
+      testData = rows[0];
+      tasks = testData.tasks;
+
+      // Check limit
+      if (testData.respondent_limit) {
+        sb.get('/rest/v1/responses?test_id=eq.' + cfg.t + '&select=id').then(function(resps) {
+          if (resps.length >= testData.respondent_limit) closedScreen.style.display = 'flex';
+          else showWelcome();
+        }).catch(function() { showWelcome(); });
+      } else {
+        showWelcome();
+      }
+    }).catch(function() {
+      closedScreen.style.display = 'flex';
+    });
 
     function showWelcome() {
       welcomeScreen.style.display = 'flex';
@@ -497,7 +827,7 @@
 
         welcomeScreen.style.display = 'none';
         overlay.style.display = 'block';
-        testFrame.src = cfg.url;
+        testFrame.src = testData.url;
         recDot.classList.remove('idle');
         startTime = Date.now();
         timerInterval = setInterval(updateTimer, 1000);
@@ -522,28 +852,21 @@
     }
 
     function showTask(idx) {
-      saveInput();
-      currentTask = idx;
+      saveInput(); currentTask = idx;
       var task = tasks[idx];
       taskNumber.textContent = (idx + 1) + ' / ' + tasks.length;
       taskText.textContent = task.text;
-
       var badges = {
-        task:     { cls: 'type-task',     icon: ICON_TASK,     label: 'Task' },
-        verbal:   { cls: 'type-verbal',   icon: ICON_VERBAL,   label: 'Verbal' },
-        input:    { cls: 'type-input',    icon: ICON_INPUT,    label: 'Input' },
+        task: { cls: 'type-task', icon: ICON_TASK, label: 'Task' },
+        verbal: { cls: 'type-verbal', icon: ICON_VERBAL, label: 'Verbal' },
+        input: { cls: 'type-input', icon: ICON_INPUT, label: 'Input' },
         scenario: { cls: 'type-scenario', icon: ICON_SCENARIO, label: 'Scenario' }
       };
       var b = badges[task.type] || badges.task;
       taskBadge.className = 'task-badge ' + b.cls;
       taskBadge.innerHTML = b.icon + ' ' + b.label;
-
       overlayInput.style.display = task.type === 'input' ? 'block' : 'none';
-      if (task.type === 'input') {
-        overlayInput.value = inputAnswers[idx] ? inputAnswers[idx].a : '';
-        overlayInput.focus();
-      }
-
+      if (task.type === 'input') { overlayInput.value = inputAnswers[idx] ? inputAnswers[idx].a : ''; overlayInput.focus(); }
       nextBtn.style.display = (idx < tasks.length - 1) ? 'inline-block' : 'none';
       finishBtn.style.display = (idx === tasks.length - 1) ? 'inline-block' : 'none';
     }
@@ -567,46 +890,26 @@
       timerEl.textContent = String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0');
     }
 
-    function handleDone(blob) {
-      var fname = 'ux-test-' + new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19) + '.webm';
-      if (!cfg.tg || !cfg.tg.token || !cfg.tg.chat) {
-        uploadStatus.textContent = 'Telegram not configured. Recording was not sent.';
-        uploadStatus.className = 'upload-status error';
-        return;
-      }
+    async function handleDone(blob) {
+      uploadStatus.textContent = 'Saving…';
+      var respId = crypto.randomUUID();
+      var videoPath = cfg.t + '/' + respId + '.webm';
 
-      uploadStatus.textContent = 'Sending recording…';
+      try {
+        uploadStatus.textContent = 'Uploading video…';
+        await sb.upload(videoPath, blob);
 
-      var answersText = '';
-      var keys = Object.keys(inputAnswers);
-      if (keys.length) {
-        answersText = '\n\n📝 Text answers:\n';
-        keys.forEach(function(k) { answersText += '\n❓ ' + inputAnswers[k].q + '\n💬 ' + inputAnswers[k].a + '\n'; });
-      }
-      var caption = 'UX test: ' + new Date().toLocaleString('en-GB') + answersText;
+        uploadStatus.textContent = 'Saving response…';
+        await sb.post('/rest/v1/responses', {
+          id: respId, test_id: cfg.t, video_path: videoPath,
+          answers: Object.keys(inputAnswers).length ? inputAnswers : null
+        });
 
-      sendTelegram(blob, fname, cfg.tg, caption).then(function() {
-        uploadStatus.textContent = 'Recording sent to the researcher!';
+        uploadStatus.textContent = 'Done! Thank you for participating.';
         uploadStatus.className = 'upload-status success';
-      }).catch(function() {
-        uploadStatus.textContent = 'Failed to send to Telegram. Please try again.';
+      } catch(err) {
+        uploadStatus.textContent = 'Error: ' + err.message;
         uploadStatus.className = 'upload-status error';
-      });
-    }
-
-    async function sendTelegram(blob, fname, tg, caption) {
-      var fd = new FormData();
-      fd.append('chat_id', tg.chat);
-      fd.append('document', blob, fname);
-      fd.append('caption', caption.length > 1024 ? caption.slice(0, 1021) + '…' : caption);
-      var r = await fetch('https://api.telegram.org/bot' + tg.token + '/sendDocument', { method: 'POST', body: fd });
-      if (!r.ok) throw new Error(await r.text());
-
-      if (caption.length > 1024) {
-        var fd2 = new FormData();
-        fd2.append('chat_id', tg.chat);
-        fd2.append('text', caption);
-        await fetch('https://api.telegram.org/bot' + tg.token + '/sendMessage', { method: 'POST', body: fd2 });
       }
     }
   }
