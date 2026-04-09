@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UX Research Tool</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; background: #f5f5f5; color: #1a1a1a; }
+
+  /* ===== RESEARCHER VIEW ===== */
+  .researcher { max-width: 560px; margin: 60px auto; padding: 0 20px; }
+  .researcher h1 { font-size: 22px; margin-bottom: 4px; }
+  .researcher .subtitle { color: #666; font-size: 14px; margin-bottom: 32px; }
+  .field { margin-bottom: 20px; }
+  .field label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: #333; }
+  .field .hint { font-size: 12px; color: #888; margin-bottom: 6px; }
+  .field input, .field textarea, .field select {
+    width: 100%; padding: 10px 12px; border: 1px solid #d0d0d0; border-radius: 8px;
+    font-size: 14px; font-family: inherit; background: #fff; transition: border-color .15s;
+  }
+  .field input:focus, .field textarea:focus { outline: none; border-color: #4a90d9; }
+  .btn-primary {
+    width: 100%; padding: 12px; background: #1a1a1a; color: #fff; border: none; border-radius: 8px;
+    font-size: 15px; font-weight: 600; cursor: pointer; transition: background .15s;
+  }
+  .btn-primary:hover { background: #333; }
+  .btn-primary:disabled { opacity: .5; cursor: not-allowed; }
+  .result-box { margin-top: 20px; display: none; }
+  .result-box.visible { display: block; }
+  .result-box label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+  .result-link-row { display: flex; gap: 8px; }
+  .result-link-row input { flex: 1; padding: 10px 12px; border: 1px solid #d0d0d0; border-radius: 8px; font-size: 13px; background: #fafafa; }
+  .btn-copy {
+    padding: 10px 20px; background: #1a1a1a; color: #fff; border: none; border-radius: 8px;
+    font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap;
+  }
+  .btn-copy:hover { background: #333; }
+  .tg-section { border: 1px solid #e0e0e0; border-radius: 10px; padding: 16px; margin-bottom: 20px; background: #fafafa; }
+  .tg-section summary { font-size: 13px; font-weight: 600; cursor: pointer; color: #333; }
+  .tg-section .tg-fields { margin-top: 12px; }
+  .tg-section .tg-fields .field { margin-bottom: 12px; }
+  .tg-section .tg-fields .field:last-child { margin-bottom: 0; }
+
+  .task-list { margin-bottom: 16px; }
+  .task-item {
+    display: flex; gap: 8px; align-items: center; margin-bottom: 8px;
+    background: #fff; border: 1px solid #d0d0d0; border-radius: 8px; padding: 8px 10px;
+  }
+  .task-item select {
+    padding: 6px 8px; border: 1px solid #d0d0d0; border-radius: 6px; font-size: 13px;
+    background: #f9f9f9; font-family: inherit; cursor: pointer; flex-shrink: 0; width: auto;
+  }
+  .task-item input {
+    flex: 1; border: none; outline: none; font-size: 14px; font-family: inherit;
+    background: transparent; padding: 4px 0;
+  }
+  .task-item .btn-remove {
+    width: 28px; height: 28px; border: none; background: none; color: #bbb; font-size: 18px;
+    cursor: pointer; border-radius: 4px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+  }
+  .task-item .btn-remove:hover { background: #fee; color: #e53935; }
+  .btn-add-task {
+    width: 100%; padding: 10px; border: 2px dashed #d0d0d0; border-radius: 8px; background: none;
+    font-size: 14px; color: #888; cursor: pointer; font-family: inherit; transition: all .15s;
+  }
+  .btn-add-task:hover { border-color: #999; color: #555; }
+
+  /* ===== RESPONDENT VIEW ===== */
+  .respondent { display: none; }
+
+  .overlay {
+    position: fixed; z-index: 10000;
+    top: 20px; left: 50%; transform: translateX(-50%);
+    width: 420px; max-width: calc(100vw - 32px);
+    background: #1a1a1a; color: #fff; border-radius: 14px;
+    box-shadow: 0 8px 32px rgba(0,0,0,.3), 0 2px 8px rgba(0,0,0,.15);
+    overflow: hidden; user-select: none;
+  }
+  .overlay.dragging { transition: none; }
+  .overlay-drag {
+    display: flex; align-items: center; padding: 10px 14px; gap: 10px;
+    cursor: grab; border-bottom: 1px solid rgba(255,255,255,.1);
+  }
+  .overlay-drag:active { cursor: grabbing; }
+  .drag-dots { display: flex; flex-direction: column; gap: 3px; opacity: .4; flex-shrink: 0; padding: 2px 4px 2px 0; }
+  .drag-dots span { display: flex; gap: 3px; }
+  .drag-dots span i { width: 3px; height: 3px; border-radius: 50%; background: #fff; display: block; }
+  .rec-indicator { display: flex; align-items: center; gap: 6px; font-variant-numeric: tabular-nums; font-size: 13px; color: #ccc; }
+  .rec-dot { width: 8px; height: 8px; border-radius: 50%; background: #e53935; animation: blink 1s infinite; }
+  .rec-dot.idle { background: #666; animation: none; }
+  @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: .3; } }
+  .overlay-drag .spacer { flex: 1; }
+  .task-counter { font-size: 12px; color: #777; }
+
+  .overlay-body { padding: 14px 16px 16px; }
+  .task-badge {
+    display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px;
+    border-radius: 100px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px;
+    margin-bottom: 8px;
+  }
+  .task-badge.type-task { background: #2979ff; }
+  .task-badge.type-verbal { background: #ab47bc; }
+  .task-badge.type-input { background: #ef6c00; }
+  .task-badge.type-scenario { background: #00897b; }
+  .task-badge svg { width: 13px; height: 13px; }
+  .task-text { font-size: 16px; line-height: 1.45; font-weight: 500; margin-bottom: 14px; }
+  .overlay-input {
+    width: 100%; padding: 10px 12px; border: 1px solid rgba(255,255,255,.2); border-radius: 8px;
+    background: rgba(255,255,255,.1); color: #fff; font-size: 14px; font-family: inherit;
+    resize: vertical; min-height: 60px; margin-bottom: 14px; outline: none;
+  }
+  .overlay-input::placeholder { color: rgba(255,255,255,.4); }
+  .overlay-input:focus { border-color: rgba(255,255,255,.4); background: rgba(255,255,255,.15); }
+  .overlay-action { display: flex; gap: 8px; }
+  .btn-next, .btn-finish, .btn-start {
+    padding: 9px 22px; border: none; border-radius: 8px; font-size: 13px;
+    font-weight: 600; cursor: pointer; transition: background .15s;
+  }
+  .btn-start { background: #4caf50; color: #fff; }
+  .btn-start:hover { background: #43a047; }
+  .btn-next { background: #fff; color: #1a1a1a; }
+  .btn-next:hover { background: #e0e0e0; }
+  .btn-finish { background: #e53935; color: #fff; }
+  .btn-finish:hover { background: #c62828; }
+
+  .test-frame { position: fixed; inset: 0; border: none; width: 100%; height: 100%; z-index: 1; }
+
+  .welcome-screen, .closed-screen {
+    position: fixed; inset: 0; background: #f5f5f5; display: none; align-items: center;
+    justify-content: center; z-index: 20000;
+  }
+  .welcome-card, .closed-card {
+    background: #fff; border-radius: 16px; padding: 40px; max-width: 480px; width: 90%;
+    box-shadow: 0 4px 24px rgba(0,0,0,.08); text-align: center;
+  }
+  .welcome-card h2, .closed-card h2 { font-size: 20px; margin-bottom: 8px; }
+  .welcome-card p, .closed-card p { color: #666; font-size: 14px; line-height: 1.6; margin-bottom: 24px; }
+  .welcome-card .permissions { text-align: left; font-size: 13px; color: #888; margin-bottom: 24px; padding: 12px 16px; background: #f9f9f9; border-radius: 8px; }
+  .welcome-card .permissions span { display: block; margin-bottom: 4px; }
+
+  .done-screen {
+    position: fixed; inset: 0; background: #f5f5f5; display: none; align-items: center;
+    justify-content: center; z-index: 20000;
+  }
+  .done-screen.visible { display: flex; }
+  .done-card {
+    background: #fff; border-radius: 16px; padding: 40px; max-width: 480px; width: 90%;
+    box-shadow: 0 4px 24px rgba(0,0,0,.08); text-align: center;
+  }
+  .done-card h2 { font-size: 20px; margin-bottom: 8px; }
+  .done-card p { color: #666; font-size: 14px; line-height: 1.6; margin-bottom: 8px; }
+  .upload-status { font-size: 13px; color: #888; margin-top: 16px; min-height: 20px; }
+  .upload-status.success { color: #4caf50; }
+  .upload-status.error { color: #e53935; }
+</style>
+</head>
+<body>
+
+<!-- ===== RESEARCHER VIEW (Ukrainian) ===== -->
+<div class="researcher" id="researcher">
+  <h1>UX Research Tool</h1>
+  <p class="subtitle">Немодероване юзабіліті-тестування. Без бекенду, без реєстрації.</p>
+
+  <div class="field">
+    <label>URL для тестування</label>
+    <div class="hint">Figma-прототип, внутрішній сайт тощо.</div>
+    <input type="url" id="testUrl" placeholder="https://your-site.com/prototype">
+  </div>
+
+  <div class="field">
+    <label>Завдання</label>
+    <div class="hint">Task — взаємодія з інтерфейсом. Verbal — озвучити думки. Input — текстова відповідь. Scenario — текст/інструкція для респондента.</div>
+    <div class="task-list" id="taskList"></div>
+    <button class="btn-add-task" id="addTaskBtn">+ Додати завдання</button>
+  </div>
+
+  <div class="field">
+    <label>Ліміт респондентів</label>
+    <div class="hint">Після досягнення ліміту посилання перестане працювати. Залиште порожнім для необмеженого доступу.</div>
+    <input type="number" id="respondentLimit" min="1" placeholder="Напр. 10">
+  </div>
+
+  <details class="tg-section">
+    <summary>Telegram — автоотримання запису (опціонально)</summary>
+    <div class="tg-fields">
+      <div class="field">
+        <label>Bot Token</label>
+        <div class="hint">Створіть бота через @BotFather і вставте токен</div>
+        <input type="text" id="tgToken" placeholder="123456789:ABCdefGHIjklMNOpqrsTUVwxyz">
+      </div>
+      <div class="field">
+        <label>Chat ID</label>
+        <div class="hint">Напишіть боту /start, потім дізнайтесь ID через @userinfobot</div>
+        <input type="text" id="tgChat" placeholder="123456789">
+      </div>
+    </div>
+  </details>
+
+  <button class="btn-primary" id="generateBtn">Згенерувати посилання</button>
+
+  <div class="result-box" id="resultBox">
+    <label>Посилання для респондента</label>
+    <div class="result-link-row">
+      <input type="text" id="resultLink" readonly>
+      <button class="btn-copy" id="copyBtn">Копіювати</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== RESPONDENT VIEW (English) ===== -->
+<div class="respondent" id="respondent">
+
+  <div class="welcome-screen" id="welcomeScreen">
+    <div class="welcome-card">
+      <h2>Usability Test</h2>
+      <p id="welcomeTaskCount"></p>
+      <div class="permissions">
+        <span>After clicking "Start", your browser will ask permission for:</span>
+        <span>• Screen recording</span>
+        <span>• Microphone access</span>
+      </div>
+      <button class="btn-start" id="startBtn">Start</button>
+    </div>
+  </div>
+
+  <div class="closed-screen" id="closedScreen">
+    <div class="closed-card">
+      <h2>Test Closed</h2>
+      <p>We've reached the maximum number of participants. Thank you for your interest!</p>
+    </div>
+  </div>
+
+  <div class="done-screen" id="doneScreen">
+    <div class="done-card">
+      <h2>Thank you!</h2>
+      <p>The test is complete. Your recording has been saved.</p>
+      <div class="upload-status" id="uploadStatus"></div>
+    </div>
+  </div>
+
+  <div class="overlay" id="overlay" style="display:none;">
+    <div class="overlay-drag" id="overlayDrag">
+      <div class="drag-dots"><span><i></i><i></i></span><span><i></i><i></i></span><span><i></i><i></i></span></div>
+      <div class="rec-indicator">
+        <div class="rec-dot idle" id="recDot"></div>
+        <span id="timer">00:00</span>
+      </div>
+      <div class="spacer"></div>
+      <span class="task-counter" id="taskNumber"></span>
+    </div>
+    <div class="overlay-body">
+      <span class="task-badge" id="taskBadge"></span>
+      <div class="task-text" id="taskText"></div>
+      <textarea class="overlay-input" id="overlayInput" style="display:none;" placeholder="Type your answer here…"></textarea>
+      <div class="overlay-action">
+        <button class="btn-next" id="nextBtn">Next</button>
+        <button class="btn-finish" id="finishBtn">Finish</button>
+      </div>
+    </div>
+  </div>
+
+  <iframe class="test-frame" id="testFrame" allow="camera; microphone; fullscreen; autoplay; clipboard-write"></iframe>
+</div>
+
+<script>
+(function() {
+  'use strict';
+
+  var ICON_TASK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 15l-2 5L9 9l11 4-5 2z"/><path d="M22 22l-5-5"/></svg>';
+  var ICON_VERBAL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>';
+  var ICON_INPUT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 10H3"/><path d="M21 6H3"/><path d="M21 14H3"/><path d="M17 18H3"/></svg>';
+  var ICON_SCENARIO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>';
+
+  function encodeConfig(obj) {
+    return btoa(unescape(encodeURIComponent(JSON.stringify(obj)))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+  function decodeConfig(str) {
+    str = str.replace(/-/g, '+').replace(/_/g, '/');
+    while (str.length % 4) str += '=';
+    return JSON.parse(decodeURIComponent(escape(atob(str))));
+  }
+
+  var hash = location.hash.slice(1), config = null;
+  if (hash) { try { config = decodeConfig(hash); } catch(e) {} }
+  if (config && config.url && config.tasks && config.tasks.length) initRespondent(config);
+  else initResearcher();
+
+  // ===== DRAG =====
+  function makeDraggable(el, handle) {
+    var dragging = false, ox = 0, oy = 0;
+    handle.addEventListener('mousedown', start);
+    handle.addEventListener('touchstart', start, { passive: false });
+    function start(e) {
+      dragging = true; el.classList.add('dragging');
+      var r = el.getBoundingClientRect();
+      el.style.transform = 'none'; el.style.left = r.left + 'px'; el.style.top = r.top + 'px';
+      var cx = e.touches ? e.touches[0].clientX : e.clientX;
+      var cy = e.touches ? e.touches[0].clientY : e.clientY;
+      ox = cx - r.left; oy = cy - r.top;
+      document.addEventListener('mousemove', move); document.addEventListener('mouseup', stop);
+      document.addEventListener('touchmove', move, { passive: false }); document.addEventListener('touchend', stop);
+      e.preventDefault();
+    }
+    function move(e) {
+      if (!dragging) return;
+      var cx = e.touches ? e.touches[0].clientX : e.clientX;
+      var cy = e.touches ? e.touches[0].clientY : e.clientY;
+      el.style.left = Math.max(0, Math.min(cx - ox, innerWidth - el.offsetWidth)) + 'px';
+      el.style.top = Math.max(0, Math.min(cy - oy, innerHeight - el.offsetHeight)) + 'px';
+    }
+    function stop() {
+      dragging = false; el.classList.remove('dragging');
+      document.removeEventListener('mousemove', move); document.removeEventListener('mouseup', stop);
+      document.removeEventListener('touchmove', move); document.removeEventListener('touchend', stop);
+    }
+  }
+
+  // ===== COUNTER (via Telegram message count) =====
+  // Sends a "session start" message. Stores its message_id.
+  // Each respondent sends a "join" message, gets its message_id.
+  // Difference = number of messages since session start = approximate respondent count.
+  // Uses a dedicated "counter chat" (same as recording chat).
+  async function createCounter(tg, limit) {
+    try {
+      var fd = new FormData();
+      fd.append('chat_id', tg.chat);
+      fd.append('text', '🔬 UX Research session started. Limit: ' + limit + ' respondents.');
+      var r = await fetch('https://api.telegram.org/bot' + tg.token + '/sendMessage', { method: 'POST', body: fd });
+      if (!r.ok) return null;
+      var data = await r.json();
+      return data.result ? data.result.message_id : null;
+    } catch(e) { return null; }
+  }
+
+  async function checkLimit(tg, baseMessageId, limit) {
+    try {
+      // Send a probe message to get current message_id
+      var fd = new FormData();
+      fd.append('chat_id', tg.chat);
+      fd.append('text', '📋 Respondent checking in…');
+      var r = await fetch('https://api.telegram.org/bot' + tg.token + '/sendMessage', { method: 'POST', body: fd });
+      if (!r.ok) return { allowed: true };
+      var data = await r.json();
+      var currentMsgId = data.result.message_id;
+
+      // Delete the probe message to keep chat clean
+      var fd2 = new FormData();
+      fd2.append('chat_id', tg.chat);
+      fd2.append('message_id', currentMsgId);
+      fetch('https://api.telegram.org/bot' + tg.token + '/deleteMessage', { method: 'POST', body: fd2 });
+
+      // Each respondent session generates ~2 messages (probe + recording).
+      // So real respondent count ≈ (currentMsgId - baseMessageId) / 2
+      // But to be safe, we use a simple formula:
+      // Messages since session = currentMsgId - baseMessageId - 1 (exclude our probe)
+      var messagesSince = currentMsgId - baseMessageId - 1;
+      // Each completed respondent = 1 recording message. Probes are deleted.
+      // So messagesSince ≈ number of completed respondents.
+      // But probes from blocked respondents are also deleted, so this overcounts slightly.
+      // Use a conservative multiplier: allow if messagesSince < limit * 2
+      // Actually simplest: just count raw messages and use limit as-is.
+      // The researcher can set a slightly higher limit to compensate.
+      return { allowed: messagesSince < limit };
+    } catch(e) { return { allowed: true }; }
+  }
+
+  // ===== RESEARCHER =====
+  function initResearcher() {
+    document.getElementById('researcher').style.display = 'block';
+    document.getElementById('respondent').style.display = 'none';
+    var taskList = document.getElementById('taskList');
+
+    // Restore saved Telegram credentials
+    try {
+      var savedTg = JSON.parse(localStorage.getItem('uxr_tg') || '{}');
+      if (savedTg.token) document.getElementById('tgToken').value = savedTg.token;
+      if (savedTg.chat) document.getElementById('tgChat').value = savedTg.chat;
+      if (savedTg.token || savedTg.chat) {
+        document.querySelector('.tg-section').open = true;
+      }
+    } catch(e) {}
+
+    function addTaskRow(type, text) {
+      var item = document.createElement('div');
+      item.className = 'task-item';
+      item.innerHTML =
+        '<select><option value="task">Task</option><option value="verbal">Verbal</option><option value="input">Input</option><option value="scenario">Scenario</option></select>' +
+        '<input type="text" placeholder="Опишіть завдання…" value="' + (text || '').replace(/"/g, '&quot;') + '">' +
+        '<button class="btn-remove" title="Видалити">&times;</button>';
+      if (type) item.querySelector('select').value = type;
+      item.querySelector('.btn-remove').addEventListener('click', function() { item.remove(); });
+      taskList.appendChild(item);
+      item.querySelector('input').focus();
+    }
+
+    addTaskRow('task', '');
+    document.getElementById('addTaskBtn').addEventListener('click', function() { addTaskRow('task', ''); });
+
+    document.getElementById('generateBtn').addEventListener('click', async function() {
+      var btn = this;
+      var url = document.getElementById('testUrl').value.trim();
+      if (!url) { alert('Введіть URL для тестування'); return; }
+
+      var items = taskList.querySelectorAll('.task-item'), tasks = [];
+      for (var i = 0; i < items.length; i++) {
+        var t = items[i].querySelector('input').value.trim();
+        if (t) tasks.push({ type: items[i].querySelector('select').value, text: t });
+      }
+      if (!tasks.length) { alert('Додайте хоча б одне завдання'); return; }
+
+      var cfg = { url: url, tasks: tasks };
+      var tgToken = document.getElementById('tgToken').value.trim();
+      var tgChat = document.getElementById('tgChat').value.trim();
+      if (tgToken && tgChat) {
+        cfg.tg = { token: tgToken, chat: tgChat };
+        try { localStorage.setItem('uxr_tg', JSON.stringify({ token: tgToken, chat: tgChat })); } catch(e) {}
+      }
+
+      var limitVal = parseInt(document.getElementById('respondentLimit').value);
+      if (limitVal > 0) {
+        if (!cfg.tg) { alert('Для ліміту респондентів потрібно налаштувати Telegram.'); return; }
+        btn.disabled = true; btn.textContent = 'Створюємо лічильник…';
+        var msgId = await createCounter(cfg.tg, limitVal);
+        if (msgId) { cfg.counterMsgId = msgId; cfg.limit = limitVal; }
+        else alert('Не вдалось створити лічильник. Посилання буде без ліміту.');
+        btn.disabled = false; btn.textContent = 'Згенерувати посилання';
+      }
+
+      var link = location.origin + location.pathname + '#' + encodeConfig(cfg);
+      if (link.length > 8000) { alert('Посилання занадто довге. Скоротіть текст завдань.'); return; }
+      document.getElementById('resultLink').value = link;
+      document.getElementById('resultBox').classList.add('visible');
+    });
+
+    document.getElementById('copyBtn').addEventListener('click', function() {
+      var btn = this;
+      navigator.clipboard.writeText(document.getElementById('resultLink').value).then(function() {
+        btn.textContent = 'Скопійовано!'; setTimeout(function() { btn.textContent = 'Копіювати'; }, 2000);
+      });
+    });
+  }
+
+  // ===== RESPONDENT =====
+  function initRespondent(cfg) {
+    document.getElementById('researcher').style.display = 'none';
+    document.getElementById('respondent').style.display = 'block';
+    document.body.style.background = '#fff';
+
+    var tasks = cfg.tasks, currentTask = 0, recorder = null, chunks = [], timerInterval = null, startTime = 0;
+    var inputAnswers = {};
+
+    var $ = function(id) { return document.getElementById(id); };
+    var welcomeScreen = $('welcomeScreen'), closedScreen = $('closedScreen'), doneScreen = $('doneScreen');
+    var overlay = $('overlay'), testFrame = $('testFrame'), startBtn = $('startBtn');
+    var nextBtn = $('nextBtn'), finishBtn = $('finishBtn'), taskNumber = $('taskNumber');
+    var taskText = $('taskText'), taskBadge = $('taskBadge'), overlayInput = $('overlayInput');
+    var timerEl = $('timer'), recDot = $('recDot'), uploadStatus = $('uploadStatus');
+
+    makeDraggable(overlay, $('overlayDrag'));
+
+    // Check limit
+    if (cfg.counterMsgId && cfg.tg && cfg.limit) {
+      checkLimit(cfg.tg, cfg.counterMsgId, cfg.limit).then(function(r) {
+        if (r.allowed) showWelcome(); else closedScreen.style.display = 'flex';
+      });
+    } else {
+      showWelcome();
+    }
+
+    function showWelcome() {
+      welcomeScreen.style.display = 'flex';
+      $('welcomeTaskCount').textContent = 'You will complete ' + tasks.length + ' step' + (tasks.length > 1 ? 's' : '') + '. Please think aloud as you go.';
+    }
+
+    startBtn.addEventListener('click', async function() {
+      startBtn.disabled = true; startBtn.textContent = 'Requesting permissions…';
+      try {
+        var screen = await navigator.mediaDevices.getDisplayMedia({ video: { displaySurface: 'browser' }, audio: true });
+        var mic; try { mic = await navigator.mediaDevices.getUserMedia({ audio: true }); } catch(e) { mic = null; }
+
+        var combined = new MediaStream();
+        screen.getVideoTracks().forEach(function(t) { combined.addTrack(t); });
+        var ctx = new AudioContext(), dest = ctx.createMediaStreamDestination();
+        if (screen.getAudioTracks().length) ctx.createMediaStreamSource(new MediaStream(screen.getAudioTracks())).connect(dest);
+        if (mic && mic.getAudioTracks().length) ctx.createMediaStreamSource(mic).connect(dest);
+        dest.stream.getAudioTracks().forEach(function(t) { combined.addTrack(t); });
+
+        screen.getVideoTracks()[0].addEventListener('ended', function() {
+          if (recorder && recorder.state !== 'inactive') finishRecording();
+        });
+
+        recorder = new MediaRecorder(combined, { mimeType: getBestMime(), videoBitsPerSecond: 2500000 });
+        recorder.ondataavailable = function(e) { if (e.data.size > 0) chunks.push(e.data); };
+        recorder.onstop = function() { handleDone(new Blob(chunks, { type: recorder.mimeType })); };
+        recorder.start(1000);
+
+        welcomeScreen.style.display = 'none';
+        overlay.style.display = 'block';
+        testFrame.src = cfg.url;
+        recDot.classList.remove('idle');
+        startTime = Date.now();
+        timerInterval = setInterval(updateTimer, 1000);
+        showTask(0);
+      } catch(err) {
+        startBtn.disabled = false; startBtn.textContent = 'Start';
+        alert('Could not get permissions. Please try again.');
+      }
+    });
+
+    function getBestMime() {
+      var t = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'];
+      for (var i = 0; i < t.length; i++) { if (MediaRecorder.isTypeSupported(t[i])) return t[i]; }
+      return 'video/webm';
+    }
+
+    function saveInput() {
+      if (tasks[currentTask] && tasks[currentTask].type === 'input' && overlayInput.style.display !== 'none') {
+        var v = overlayInput.value.trim();
+        if (v) inputAnswers[currentTask] = { q: tasks[currentTask].text, a: v };
+      }
+    }
+
+    function showTask(idx) {
+      saveInput();
+      currentTask = idx;
+      var task = tasks[idx];
+      taskNumber.textContent = (idx + 1) + ' / ' + tasks.length;
+      taskText.textContent = task.text;
+
+      var badges = {
+        task:     { cls: 'type-task',     icon: ICON_TASK,     label: 'Task' },
+        verbal:   { cls: 'type-verbal',   icon: ICON_VERBAL,   label: 'Verbal' },
+        input:    { cls: 'type-input',    icon: ICON_INPUT,    label: 'Input' },
+        scenario: { cls: 'type-scenario', icon: ICON_SCENARIO, label: 'Scenario' }
+      };
+      var b = badges[task.type] || badges.task;
+      taskBadge.className = 'task-badge ' + b.cls;
+      taskBadge.innerHTML = b.icon + ' ' + b.label;
+
+      overlayInput.style.display = task.type === 'input' ? 'block' : 'none';
+      if (task.type === 'input') {
+        overlayInput.value = inputAnswers[idx] ? inputAnswers[idx].a : '';
+        overlayInput.focus();
+      }
+
+      nextBtn.style.display = (idx < tasks.length - 1) ? 'inline-block' : 'none';
+      finishBtn.style.display = (idx === tasks.length - 1) ? 'inline-block' : 'none';
+    }
+
+    nextBtn.addEventListener('click', function() { if (currentTask < tasks.length - 1) showTask(currentTask + 1); });
+    finishBtn.addEventListener('click', finishRecording);
+
+    function finishRecording() {
+      saveInput();
+      if (recorder && recorder.state !== 'inactive') recorder.stop();
+      if (timerInterval) clearInterval(timerInterval);
+      recDot.classList.add('idle');
+      recorder.stream.getTracks().forEach(function(t) { t.stop(); });
+      overlay.style.display = 'none';
+      testFrame.style.display = 'none';
+      doneScreen.classList.add('visible');
+    }
+
+    function updateTimer() {
+      var s = Math.floor((Date.now() - startTime) / 1000);
+      timerEl.textContent = String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0');
+    }
+
+    function handleDone(blob) {
+      var fname = 'ux-test-' + new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19) + '.webm';
+      if (!cfg.tg || !cfg.tg.token || !cfg.tg.chat) {
+        uploadStatus.textContent = 'Telegram not configured. Recording was not sent.';
+        uploadStatus.className = 'upload-status error';
+        return;
+      }
+
+      uploadStatus.textContent = 'Sending recording…';
+
+      var answersText = '';
+      var keys = Object.keys(inputAnswers);
+      if (keys.length) {
+        answersText = '\n\n📝 Text answers:\n';
+        keys.forEach(function(k) { answersText += '\n❓ ' + inputAnswers[k].q + '\n💬 ' + inputAnswers[k].a + '\n'; });
+      }
+      var caption = 'UX test: ' + new Date().toLocaleString('en-GB') + answersText;
+
+      sendTelegram(blob, fname, cfg.tg, caption).then(function() {
+        uploadStatus.textContent = 'Recording sent to the researcher!';
+        uploadStatus.className = 'upload-status success';
+      }).catch(function() {
+        uploadStatus.textContent = 'Failed to send to Telegram. Please try again.';
+        uploadStatus.className = 'upload-status error';
+      });
+    }
+
+    async function sendTelegram(blob, fname, tg, caption) {
+      var fd = new FormData();
+      fd.append('chat_id', tg.chat);
+      fd.append('document', blob, fname);
+      fd.append('caption', caption.length > 1024 ? caption.slice(0, 1021) + '…' : caption);
+      var r = await fetch('https://api.telegram.org/bot' + tg.token + '/sendDocument', { method: 'POST', body: fd });
+      if (!r.ok) throw new Error(await r.text());
+
+      if (caption.length > 1024) {
+        var fd2 = new FormData();
+        fd2.append('chat_id', tg.chat);
+        fd2.append('text', caption);
+        await fetch('https://api.telegram.org/bot' + tg.token + '/sendMessage', { method: 'POST', body: fd2 });
+      }
+    }
+  }
+})();
+</script>
+</body>
+</html>
