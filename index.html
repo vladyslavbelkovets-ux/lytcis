@@ -228,6 +228,7 @@
 <!-- ===== SETUP (first time) ===== -->
 <div class="page" id="pageSetup">
   <div class="setup-card">
+    <button class="btn-back" id="backFromSetup" style="display:none;">&larr; Назад</button>
     <h2>Supabase Setup</h2>
     <p class="subtitle">Одноразове налаштування. Дані зберігатимуться у вашому Supabase проекті.</p>
 
@@ -577,6 +578,14 @@ create policy "read videos"
     var errEl = document.getElementById('setupError');
     if (SB.url) urlEl.value = SB.url;
     if (SB.key) keyEl.value = SB.key;
+
+    var backBtn = document.getElementById('backFromSetup');
+    if (SB.configured()) {
+      backBtn.style.display = '';
+      backBtn.onclick = function() { showPage('pageDashboard'); loadDashboard(); };
+    } else {
+      backBtn.style.display = 'none';
+    }
 
     document.getElementById('toggleSql').onclick = function() {
       var b = document.getElementById('sqlBlock');
