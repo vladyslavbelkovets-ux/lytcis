@@ -412,12 +412,18 @@ create policy "read videos"
   // ===== SUPABASE HELPERS =====
   var SB = {
     url: null, key: null,
+    // Default Supabase credentials (team-shared)
+    DEFAULT_URL: 'https://osojqupqweggxitcggfo.supabase.co',
+    DEFAULT_KEY: 'sb_publishable_mHaGUz2gBD4xjEA3ePSuLA_pGf37bWF',
     init: function() {
       try {
         var c = JSON.parse(localStorage.getItem('uxr_sb') || '{}');
-        this.url = c.url || null;
-        this.key = c.key || null;
-      } catch(e) {}
+        this.url = c.url || this.DEFAULT_URL;
+        this.key = c.key || this.DEFAULT_KEY;
+      } catch(e) {
+        this.url = this.DEFAULT_URL;
+        this.key = this.DEFAULT_KEY;
+      }
     },
     save: function(url, key) {
       this.url = url; this.key = key;
