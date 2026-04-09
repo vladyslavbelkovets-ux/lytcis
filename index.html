@@ -116,20 +116,32 @@
   /* ===== TASK BUILDER ===== */
   .task-list { margin-bottom: 16px; }
   .task-item {
-    display: flex; gap: 8px; align-items: center; margin-bottom: 8px;
+    display: flex; gap: 8px; align-items: flex-start; margin-bottom: 8px;
     background: #fff; border: 1px solid #d0d0d0; border-radius: 8px; padding: 8px 10px;
+    transition: opacity .15s, box-shadow .15s;
   }
+  .task-item.dragging { opacity: .4; }
+  .task-item.drag-over { box-shadow: 0 -2px 0 0 #4a90d9; }
+  .task-item .drag-handle {
+    cursor: grab; color: #ccc; flex-shrink: 0; padding: 4px 2px; display: flex; align-items: center;
+    font-size: 16px; line-height: 1; user-select: none;
+  }
+  .task-item .drag-handle:active { cursor: grabbing; }
+  .task-item .drag-handle:hover { color: #999; }
   .task-item select {
     padding: 6px 8px; border: 1px solid #d0d0d0; border-radius: 6px; font-size: 13px;
     background: #f9f9f9; font-family: inherit; cursor: pointer; flex-shrink: 0; width: auto;
+    align-self: center;
   }
-  .task-item input {
+  .task-item textarea {
     flex: 1; border: none; outline: none; font-size: 14px; font-family: inherit;
-    background: transparent; padding: 4px 0;
+    background: transparent; padding: 4px 0; resize: vertical; min-height: 28px; max-height: 200px;
+    line-height: 1.4; overflow: hidden;
   }
   .task-item .btn-remove {
     width: 28px; height: 28px; border: none; background: none; color: #bbb; font-size: 18px;
     cursor: pointer; border-radius: 4px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+    align-self: center;
   }
   .task-item .btn-remove:hover { background: #fee; color: #e53935; }
   .btn-add-task {
@@ -721,17 +733,58 @@ create policy "read videos"
     var taskList = document.getElementById('taskList');
     taskList.innerHTML = '';
 
+    function autoResize(ta) {
+      ta.style.height = 'auto';
+      ta.style.height = ta.scrollHeight + 'px';
+    }
+
     function addTaskRow(type, text) {
       var item = document.createElement('div');
       item.className = 'task-item';
+      item.draggable = true;
       item.innerHTML =
+        '<span class="drag-handle" title="Перетягнути">⠿</span>' +
         '<select><option value="task">Task</option><option value="verbal">Verbal</option><option value="input">Input</option><option value="scenario">Scenario</option></select>' +
-        '<input type="text" placeholder="Опишіть завдання…" value="' + (text || '').replace(/"/g, '&quot;') + '">' +
+        '<textarea rows="1" placeholder="Опишіть завдання…"></textarea>' +
         '<button class="btn-remove" title="Видалити">&times;</button>';
       if (type) item.querySelector('select').value = type;
+      var ta = item.querySelector('textarea');
+      if (text) { ta.value = text; setTimeout(function() { autoResize(ta); }, 0); }
+      ta.addEventListener('input', function() { autoResize(this); });
       item.querySelector('.btn-remove').addEventListener('click', function() { item.remove(); });
+
+      // Drag and drop
+      item.addEventListener('dragstart', function(e) {
+        item.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+      });
+      item.addEventListener('dragend', function() {
+        item.classList.remove('dragging');
+        taskList.querySelectorAll('.task-item').forEach(function(el) { el.classList.remove('drag-over'); });
+      });
+      item.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        var dragging = taskList.querySelector('.dragging');
+        if (dragging && dragging !== item) {
+          taskList.querySelectorAll('.task-item').forEach(function(el) { el.classList.remove('drag-over'); });
+          item.classList.add('drag-over');
+        }
+      });
+      item.addEventListener('drop', function(e) {
+        e.preventDefault();
+        var dragging = taskList.querySelector('.dragging');
+        if (dragging && dragging !== item) {
+          var items = Array.from(taskList.querySelectorAll('.task-item'));
+          var fromIdx = items.indexOf(dragging);
+          var toIdx = items.indexOf(item);
+          if (fromIdx < toIdx) item.after(dragging);
+          else item.before(dragging);
+        }
+        taskList.querySelectorAll('.task-item').forEach(function(el) { el.classList.remove('drag-over'); });
+      });
+
       taskList.appendChild(item);
-      item.querySelector('input').focus();
+      ta.focus();
     }
 
     addTaskRow('task', '');
@@ -745,7 +798,7 @@ create policy "read videos"
 
       var items = taskList.querySelectorAll('.task-item'), tasks = [];
       for (var i = 0; i < items.length; i++) {
-        var t = items[i].querySelector('input').value.trim();
+        var t = items[i].querySelector('textarea').value.trim();
         if (t) tasks.push({ type: items[i].querySelector('select').value, text: t });
       }
       if (!tasks.length) { alert('Додайте хоча б одне завдання'); return; }
