@@ -322,6 +322,50 @@
   .detail-screen-item { margin-bottom: 16px; }
   .detail-screen-item img { width: 100%; border-radius: 8px; margin-bottom: 8px; }
   .detail-screen-item .detail-task-item { padding-left: 8px; }
+
+  /* ===== MOBILE RESPONDENT ===== */
+  @media (max-width: 600px) {
+    /* Welcome / Done / Closed cards */
+    .welcome-card, .closed-card, .done-card {
+      padding: 28px 20px; width: 95%; border-radius: 14px;
+    }
+    .welcome-card h2, .closed-card h2, .done-card h2 { font-size: 18px; }
+    .welcome-card p, .closed-card p, .done-card p { font-size: 13px; }
+    .btn-start { width: 100%; padding: 14px; font-size: 15px; border-radius: 10px; }
+
+    /* Overlay → bottom sheet */
+    .overlay {
+      top: auto !important; bottom: 0 !important; left: 0 !important; right: 0 !important;
+      transform: none !important; width: 100% !important; max-width: 100% !important;
+      border-radius: 16px 16px 0 0; max-height: 60vh; overflow-y: auto;
+    }
+    .overlay.dragging { transition: none; }
+    .overlay-drag { cursor: default; padding: 8px 14px; }
+    .drag-dots { display: none; }
+    .overlay-body { padding: 10px 14px 16px; }
+    .task-text { font-size: 15px; margin-bottom: 10px; }
+    .overlay-input { font-size: 16px; min-height: 50px; }
+    .overlay-action { flex-direction: column; }
+    .btn-next, .btn-finish { width: 100%; padding: 12px; font-size: 14px; text-align: center; }
+
+    /* Test frame on mobile — override inset:0 */
+    .test-frame { inset: auto !important; top: 0 !important; left: 0 !important; right: 0 !important; width: 100% !important; height: 50vh !important; bottom: auto !important; }
+
+    /* Screenshot respondent */
+    .screenshot-container { padding: 20px 16px; }
+    .screenshot-img { border-radius: 8px; margin-bottom: 16px; }
+    .screenshot-question textarea { font-size: 16px; min-height: 50px; }
+    .screenshot-actions { flex-direction: column; }
+    .screenshot-actions .btn-next, .screenshot-actions .btn-finish {
+      width: 100%; padding: 14px; font-size: 15px; text-align: center;
+    }
+
+    /* Mobile no-record banner */
+    .mobile-notice {
+      font-size: 12px; color: #888; background: #f9f9f9; border-radius: 8px;
+      padding: 10px 14px; margin-bottom: 16px; text-align: center; line-height: 1.5;
+    }
+  }
 </style>
 </head>
 <body>
@@ -642,6 +686,9 @@ create policy "read videos"
   var ICON_VERBAL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>';
   var ICON_INPUT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 10H3"/><path d="M21 6H3"/><path d="M21 14H3"/><path d="M17 18H3"/></svg>';
   var ICON_SCENARIO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>';
+
+  // ===== MOBILE DETECTION =====
+  var isMobile = /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || (window.innerWidth <= 600);
 
   // ===== DRAG =====
   function makeDraggable(el, handle) {
@@ -1140,7 +1187,7 @@ create policy "read videos"
     var tasks = [], currentTask = 0, recorder = null, chunks = [], timerInterval = null, startTime = 0;
     var inputAnswers = {}, testData = null;
 
-    makeDraggable(overlay, $('overlayDrag'));
+    if (!isMobile) makeDraggable(overlay, $('overlayDrag'));
 
     // Fetch test data
     sb.get('/rest/v1/tests?id=eq.' + cfg.t + '&select=*').then(function(rows) {
@@ -1252,8 +1299,25 @@ create policy "read videos"
     // ---- Website respondent (existing) ----
     function showWelcome() {
       welcomeScreen.style.display = 'flex';
-      $('welcomeTaskCount').textContent = 'You will complete ' + tasks.length + ' step' + (tasks.length > 1 ? 's' : '') + '. Please think aloud as you go.';
-      startBtn.onclick = startWebsiteTest;
+      var perms = document.querySelector('.welcome-card .permissions');
+      if (isMobile) {
+        $('welcomeTaskCount').textContent = 'You will complete ' + tasks.length + ' step' + (tasks.length > 1 ? 's' : '') + '.';
+        perms.innerHTML = '<span>You will interact with a website and complete tasks.</span><span>No screen recording on mobile — only your answers will be saved.</span>';
+      } else {
+        $('welcomeTaskCount').textContent = 'You will complete ' + tasks.length + ' step' + (tasks.length > 1 ? 's' : '') + '. Please think aloud as you go.';
+        perms.innerHTML = '<span>After clicking "Start", your browser will ask permission for:</span><span>• Screen recording</span><span>• Microphone access</span>';
+      }
+      startBtn.onclick = isMobile ? startMobileWebsiteTest : startWebsiteTest;
+    }
+
+    // Mobile: no screen recording, open site in iframe, show overlay
+    function startMobileWebsiteTest() {
+      welcomeScreen.style.display = 'none';
+      overlay.style.display = 'block';
+      testFrame.src = testData.url;
+      recDot.classList.add('idle');
+      timerEl.textContent = '';
+      showTask(0);
     }
 
     async function startWebsiteTest() {
@@ -1329,13 +1393,34 @@ create policy "read videos"
 
     function finishRecording() {
       saveInput();
-      if (recorder && recorder.state !== 'inactive') recorder.stop();
+      if (recorder && recorder.state !== 'inactive') {
+        recorder.stop();
+        recorder.stream.getTracks().forEach(function(t) { t.stop(); });
+      } else if (isMobile) {
+        // Mobile: no recording, just save answers
+        handleMobileDone();
+      }
       if (timerInterval) clearInterval(timerInterval);
       recDot.classList.add('idle');
-      recorder.stream.getTracks().forEach(function(t) { t.stop(); });
       overlay.style.display = 'none';
       testFrame.style.display = 'none';
       doneScreen.classList.add('visible');
+    }
+
+    async function handleMobileDone() {
+      uploadStatus.textContent = 'Saving…';
+      try {
+        var respId = crypto.randomUUID();
+        await sb.post('/rest/v1/responses', {
+          id: respId, test_id: cfg.t, video_path: null,
+          answers: Object.keys(inputAnswers).length ? inputAnswers : null
+        });
+        uploadStatus.textContent = 'Done! Thank you for participating.';
+        uploadStatus.className = 'upload-status success';
+      } catch(err) {
+        uploadStatus.textContent = 'Error: ' + err.message;
+        uploadStatus.className = 'upload-status error';
+      }
     }
 
     function updateTimer() {
