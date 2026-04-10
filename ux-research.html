@@ -302,20 +302,24 @@
   /* ===== SCREENSHOT RESPONDENT ===== */
   .screenshot-view { position: fixed; inset: 0; background: #f5f5f5; display: none; z-index: 100; overflow-y: auto; }
   .screenshot-view.visible { display: block; }
-  .screenshot-container { max-width: 720px; margin: 0 auto; padding: 32px 20px; }
+  .screenshot-container { max-width: 1100px; margin: 0 auto; padding: 32px 20px; }
   .screenshot-progress { font-size: 12px; color: #888; margin-bottom: 12px; }
-  .screenshot-img { width: 100%; border-radius: 10px; box-shadow: 0 2px 12px rgba(0,0,0,.1); margin-bottom: 20px; }
+  .screenshot-split { display: flex; gap: 32px; align-items: flex-start; }
+  .screenshot-left { flex: 1; min-width: 0; position: sticky; top: 32px; }
+  .screenshot-img { width: 100%; border-radius: 10px; box-shadow: 0 2px 12px rgba(0,0,0,.1); }
+  .screenshot-right { width: 360px; flex-shrink: 0; }
   .screenshot-question { margin-bottom: 16px; }
-  .screenshot-question .sq-label { font-size: 14px; font-weight: 500; margin-bottom: 6px; color: #333; }
-  .screenshot-question .sq-type { display: inline-block; font-size: 10px; font-weight: 700; text-transform: uppercase; padding: 2px 6px; border-radius: 4px; color: #fff; margin-right: 6px; }
+  .screenshot-question .sq-label { font-size: 15px; font-weight: 500; margin-bottom: 8px; color: #333; line-height: 1.5; }
+  .screenshot-question .sq-type { display: inline-block; font-size: 10px; font-weight: 700; text-transform: uppercase; padding: 2px 6px; border-radius: 4px; color: #fff; margin-right: 6px; vertical-align: middle; }
   .sq-type.t-input { background: #ef6c00; }
   .sq-type.t-verbal { background: #ab47bc; }
   .screenshot-question textarea {
     width: 100%; padding: 10px 12px; border: 1px solid #d0d0d0; border-radius: 8px;
-    font-size: 14px; font-family: inherit; background: #fff; min-height: 60px; resize: vertical;
+    font-size: 14px; font-family: inherit; background: #fff; min-height: 80px; resize: vertical;
   }
   .screenshot-question textarea:focus { outline: none; border-color: #4a90d9; }
-  .screenshot-actions { display: flex; gap: 8px; margin-top: 20px; }
+  .verbal-hint { font-size: 13px; color: #888; font-style: italic; margin-top: 4px; }
+  .screenshot-actions { display: flex; gap: 8px; margin-top: 24px; }
   .screenshot-actions .btn-next, .screenshot-actions .btn-finish { padding: 10px 24px; }
 
   /* ===== SCREENSHOT DETAIL ===== */
@@ -353,7 +357,10 @@
 
     /* Screenshot respondent */
     .screenshot-container { padding: 20px 16px; }
-    .screenshot-img { border-radius: 8px; margin-bottom: 16px; }
+    .screenshot-split { flex-direction: column; gap: 16px; }
+    .screenshot-left { position: static; }
+    .screenshot-right { width: 100%; }
+    .screenshot-img { border-radius: 8px; margin-bottom: 0; }
     .screenshot-question textarea { font-size: 16px; min-height: 50px; }
     .screenshot-actions { flex-direction: column; }
     .screenshot-actions .btn-next, .screenshot-actions .btn-finish {
@@ -573,11 +580,17 @@ create policy "read videos"
   <div class="screenshot-view" id="screenshotView">
     <div class="screenshot-container">
       <div class="screenshot-progress" id="screenshotProgress"></div>
-      <img class="screenshot-img" id="screenshotImg" alt="Screen">
-      <div id="screenshotQuestions"></div>
-      <div class="screenshot-actions">
-        <button class="btn-next" id="screenshotNext">Next</button>
-        <button class="btn-finish" id="screenshotFinish" style="display:none;">Finish</button>
+      <div class="screenshot-split">
+        <div class="screenshot-left">
+          <img class="screenshot-img" id="screenshotImg" alt="Screen">
+        </div>
+        <div class="screenshot-right">
+          <div id="screenshotQuestions"></div>
+          <div class="screenshot-actions">
+            <button class="btn-next" id="screenshotNext">Next</button>
+            <button class="btn-finish" id="screenshotFinish" style="display:none;">Finish</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -1228,56 +1241,104 @@ create policy "read videos"
     function startScreenshotTest() {
       welcomeScreen.style.display = 'none';
       $('screenshotView').classList.add('visible');
-      showScreen(0);
+      currentScreen = 0;
+      currentQuestion = 0;
+      showQuestion();
     }
 
-    function showScreen(idx) {
-      currentScreen = idx;
-      var screen = tasks[idx];
-      $('screenshotProgress').textContent = 'Screen ' + (idx + 1) + ' of ' + tasks.length;
+    var currentQuestion = 0;
+
+    // Build flat list of all steps: [{screen, qIndex, question, isLast}]
+    function getTotalSteps() {
+      var total = 0;
+      tasks.forEach(function(s) { total += s.questions.length; });
+      return total;
+    }
+
+    function getCurrentStepNumber() {
+      var n = 0;
+      for (var i = 0; i < currentScreen; i++) n += tasks[i].questions.length;
+      n += currentQuestion + 1;
+      return n;
+    }
+
+    function isLastStep() {
+      return currentScreen === tasks.length - 1 && currentQuestion === tasks[currentScreen].questions.length - 1;
+    }
+
+    function showQuestion() {
+      var screen = tasks[currentScreen];
+      var q = screen.questions[currentQuestion];
+      var step = getCurrentStepNumber();
+      var total = getTotalSteps();
+
+      $('screenshotProgress').textContent = 'Question ' + step + ' of ' + total + '  ·  Screen ' + (currentScreen + 1) + ' of ' + tasks.length;
       $('screenshotImg').src = screenshotBaseUrl + screen.image;
 
       var qContainer = $('screenshotQuestions');
       qContainer.innerHTML = '';
-      screen.questions.forEach(function(q, qi) {
-        var div = document.createElement('div');
-        div.className = 'screenshot-question';
-        var typeLabel = q.type === 'input' ? 'Input' : 'Verbal';
-        var typeCls = q.type === 'input' ? 't-input' : 't-verbal';
-        div.innerHTML =
-          '<div class="sq-label"><span class="sq-type ' + typeCls + '">' + typeLabel + '</span>' + esc(q.text) + '</div>' +
-          '<textarea placeholder="Type your answer here…" data-screen="' + idx + '" data-q="' + qi + '"></textarea>';
+
+      var div = document.createElement('div');
+      div.className = 'screenshot-question';
+      var typeLabel = q.type === 'input' ? 'Input' : 'Verbal';
+      var typeCls = q.type === 'input' ? 't-input' : 't-verbal';
+
+      var html = '<div class="sq-label"><span class="sq-type ' + typeCls + '">' + typeLabel + '</span>' + esc(q.text) + '</div>';
+
+      if (q.type === 'input') {
+        html += '<textarea placeholder="Type your answer here…" data-screen="' + currentScreen + '" data-q="' + currentQuestion + '"></textarea>';
+      } else {
+        html += '<div class="verbal-hint">This is a verbal question — just think about it, no written answer needed.</div>';
+      }
+
+      div.innerHTML = html;
+
+      // Restore previous answer for input
+      if (q.type === 'input') {
+        var key = currentScreen + '_' + currentQuestion;
         var ta = div.querySelector('textarea');
-        // Restore previous answer if exists
-        var key = idx + '_' + qi;
         if (screenshotAnswers[key]) ta.value = screenshotAnswers[key].a;
-        qContainer.appendChild(div);
-      });
+      }
+
+      qContainer.appendChild(div);
 
       var sNext = $('screenshotNext');
       var sFinish = $('screenshotFinish');
-      sNext.style.display = idx < tasks.length - 1 ? 'inline-block' : 'none';
-      sFinish.style.display = idx === tasks.length - 1 ? 'inline-block' : 'none';
+      var last = isLastStep();
+      sNext.style.display = last ? 'none' : 'inline-block';
+      sFinish.style.display = last ? 'inline-block' : 'none';
+
+      // Scroll right panel to top
+      $('screenshotView').scrollTop = 0;
     }
 
-    function saveScreenAnswers() {
-      var tas = $('screenshotQuestions').querySelectorAll('textarea');
-      tas.forEach(function(ta) {
+    function saveCurrentAnswer() {
+      var ta = $('screenshotQuestions').querySelector('textarea');
+      if (ta) {
         var si = ta.dataset.screen, qi = ta.dataset.q;
         var v = ta.value.trim();
         if (v) {
           screenshotAnswers[si + '_' + qi] = { q: tasks[si].questions[qi].text, a: v };
         }
-      });
+      }
     }
 
-    $('screenshotNext').addEventListener('click', function() {
-      saveScreenAnswers();
-      if (currentScreen < tasks.length - 1) showScreen(currentScreen + 1);
-    });
+    function advanceQuestion() {
+      saveCurrentAnswer();
+      var screen = tasks[currentScreen];
+      if (currentQuestion < screen.questions.length - 1) {
+        currentQuestion++;
+      } else if (currentScreen < tasks.length - 1) {
+        currentScreen++;
+        currentQuestion = 0;
+      }
+      showQuestion();
+    }
+
+    $('screenshotNext').addEventListener('click', advanceQuestion);
 
     $('screenshotFinish').addEventListener('click', async function() {
-      saveScreenAnswers();
+      saveCurrentAnswer();
       $('screenshotView').classList.remove('visible');
       doneScreen.classList.add('visible');
       uploadStatus.textContent = 'Saving…';
