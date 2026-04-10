@@ -233,6 +233,95 @@
   .upload-status { font-size: 13px; color: #888; margin-top: 16px; min-height: 20px; }
   .upload-status.success { color: #4caf50; }
   .upload-status.error { color: #e53935; }
+
+  /* ===== TYPE TOGGLE ===== */
+  .type-toggle { display: flex; gap: 0; margin-bottom: 24px; border: 1px solid #d0d0d0; border-radius: 8px; overflow: hidden; }
+  .type-toggle button {
+    flex: 1; padding: 10px; border: none; background: #fff; font-size: 13px; font-weight: 600;
+    cursor: pointer; font-family: inherit; color: #888; transition: all .15s;
+  }
+  .type-toggle button.active { background: #1a1a1a; color: #fff; }
+  .type-toggle button:not(.active):hover { background: #f5f5f5; }
+
+  /* ===== SCREEN BUILDER ===== */
+  .screen-builder { display: none; }
+  .screen-builder.visible { display: block; }
+  .screen-card {
+    background: #fff; border: 1px solid #d0d0d0; border-radius: 10px; padding: 16px;
+    margin-bottom: 12px; position: relative;
+  }
+  .screen-card .screen-header { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+  .screen-card .screen-header .screen-num { font-size: 13px; font-weight: 700; color: #555; }
+  .screen-card .screen-header .spacer { flex: 1; }
+  .screen-card .btn-remove-screen {
+    width: 28px; height: 28px; border: none; background: none; color: #bbb; font-size: 18px;
+    cursor: pointer; border-radius: 4px; display: flex; align-items: center; justify-content: center;
+  }
+  .screen-card .btn-remove-screen:hover { background: #fee; color: #e53935; }
+  .screen-upload-area {
+    border: 2px dashed #d0d0d0; border-radius: 8px; padding: 24px; text-align: center;
+    cursor: pointer; transition: all .15s; margin-bottom: 12px; position: relative; overflow: hidden;
+  }
+  .screen-upload-area:hover { border-color: #999; background: #fafafa; }
+  .screen-upload-area.has-image { padding: 0; border-style: solid; border-color: #e0e0e0; }
+  .screen-upload-area img { width: 100%; display: block; border-radius: 6px; }
+  .screen-upload-area .upload-placeholder { color: #888; font-size: 13px; }
+  .screen-upload-area .upload-placeholder svg { display: block; margin: 0 auto 8px; width: 32px; height: 32px; color: #ccc; }
+  .screen-upload-area input[type="file"] { display: none; }
+  .screen-questions-label { font-size: 12px; font-weight: 600; color: #888; margin-bottom: 8px; }
+  .screen-q-list { margin-bottom: 8px; }
+  .screen-q-item {
+    display: flex; gap: 8px; align-items: flex-start; margin-bottom: 6px;
+    background: #f9f9f9; border: 1px solid #e8e8e8; border-radius: 6px; padding: 6px 8px;
+  }
+  .screen-q-item select {
+    padding: 4px 6px; border: 1px solid #d0d0d0; border-radius: 4px; font-size: 12px;
+    background: #fff; font-family: inherit; cursor: pointer; flex-shrink: 0;
+  }
+  .screen-q-item textarea {
+    flex: 1; border: none; outline: none; font-size: 13px; font-family: inherit;
+    background: transparent; padding: 2px 0; resize: vertical; min-height: 24px; max-height: 120px;
+    line-height: 1.4; overflow: hidden;
+  }
+  .screen-q-item .btn-remove {
+    width: 24px; height: 24px; border: none; background: none; color: #bbb; font-size: 16px;
+    cursor: pointer; border-radius: 4px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+  }
+  .screen-q-item .btn-remove:hover { background: #fee; color: #e53935; }
+  .btn-add-question {
+    width: 100%; padding: 6px; border: 1px dashed #d0d0d0; border-radius: 6px; background: none;
+    font-size: 12px; color: #888; cursor: pointer; font-family: inherit;
+  }
+  .btn-add-question:hover { border-color: #999; color: #555; }
+  .btn-add-screen {
+    width: 100%; padding: 12px; border: 2px dashed #d0d0d0; border-radius: 10px; background: none;
+    font-size: 14px; color: #888; cursor: pointer; font-family: inherit; transition: all .15s;
+  }
+  .btn-add-screen:hover { border-color: #999; color: #555; }
+
+  /* ===== SCREENSHOT RESPONDENT ===== */
+  .screenshot-view { position: fixed; inset: 0; background: #f5f5f5; display: none; z-index: 100; overflow-y: auto; }
+  .screenshot-view.visible { display: block; }
+  .screenshot-container { max-width: 720px; margin: 0 auto; padding: 32px 20px; }
+  .screenshot-progress { font-size: 12px; color: #888; margin-bottom: 12px; }
+  .screenshot-img { width: 100%; border-radius: 10px; box-shadow: 0 2px 12px rgba(0,0,0,.1); margin-bottom: 20px; }
+  .screenshot-question { margin-bottom: 16px; }
+  .screenshot-question .sq-label { font-size: 14px; font-weight: 500; margin-bottom: 6px; color: #333; }
+  .screenshot-question .sq-type { display: inline-block; font-size: 10px; font-weight: 700; text-transform: uppercase; padding: 2px 6px; border-radius: 4px; color: #fff; margin-right: 6px; }
+  .sq-type.t-input { background: #ef6c00; }
+  .sq-type.t-verbal { background: #ab47bc; }
+  .screenshot-question textarea {
+    width: 100%; padding: 10px 12px; border: 1px solid #d0d0d0; border-radius: 8px;
+    font-size: 14px; font-family: inherit; background: #fff; min-height: 60px; resize: vertical;
+  }
+  .screenshot-question textarea:focus { outline: none; border-color: #4a90d9; }
+  .screenshot-actions { display: flex; gap: 8px; margin-top: 20px; }
+  .screenshot-actions .btn-next, .screenshot-actions .btn-finish { padding: 10px 24px; }
+
+  /* ===== SCREENSHOT DETAIL ===== */
+  .detail-screen-item { margin-bottom: 16px; }
+  .detail-screen-item img { width: 100%; border-radius: 8px; margin-bottom: 8px; }
+  .detail-screen-item .detail-task-item { padding-left: 8px; }
 </style>
 </head>
 <body>
@@ -322,20 +411,39 @@ create policy "read videos"
     <button class="btn-back" id="backFromCreate">&larr; Назад</button>
     <h2 style="font-size:18px;margin-bottom:24px;">Новий тест</h2>
 
+    <div class="type-toggle" id="testTypeToggle">
+      <button class="active" data-mode="website">🌐 Тест сайту</button>
+      <button data-mode="screenshots">🖼 Тест скріншотів</button>
+    </div>
+
     <div class="field">
       <label>Назва тесту</label>
       <input type="text" id="testName" placeholder="Напр. Тест головної сторінки v2">
     </div>
-    <div class="field">
-      <label>URL для тестування</label>
-      <div class="hint">Figma-прототип, внутрішній сайт тощо.</div>
-      <input type="url" id="testUrl" placeholder="https://your-site.com/prototype">
+
+    <!-- Website mode fields -->
+    <div id="websiteFields">
+      <div class="field">
+        <label>URL для тестування</label>
+        <div class="hint">Figma-прототип, внутрішній сайт тощо.</div>
+        <input type="url" id="testUrl" placeholder="https://your-site.com/prototype">
+      </div>
+      <div class="field">
+        <label>Завдання</label>
+        <div class="hint">Task — взаємодія з інтерфейсом. Verbal — озвучити думки. Input — текстова відповідь. Scenario — інструкція.</div>
+        <div class="task-list" id="taskList"></div>
+        <button class="btn-add-task" id="addTaskBtn">+ Додати завдання</button>
+      </div>
     </div>
-    <div class="field">
-      <label>Завдання</label>
-      <div class="hint">Task — взаємодія з інтерфейсом. Verbal — озвучити думки. Input — текстова відповідь. Scenario — інструкція.</div>
-      <div class="task-list" id="taskList"></div>
-      <button class="btn-add-task" id="addTaskBtn">+ Додати завдання</button>
+
+    <!-- Screenshot mode fields -->
+    <div id="screenshotFields" style="display:none;">
+      <div class="field">
+        <label>Екрани</label>
+        <div class="hint">Завантажте скріншоти і додайте питання до кожного.</div>
+        <div id="screenList"></div>
+        <button class="btn-add-screen" id="addScreenBtn">+ Додати екран</button>
+      </div>
     </div>
     <div class="field">
       <label>Ліміт респондентів</label>
@@ -416,6 +524,19 @@ create policy "read videos"
     </div>
   </div>
   <iframe class="test-frame" id="testFrame" allow="camera; microphone; fullscreen; autoplay; clipboard-write"></iframe>
+
+  <!-- Screenshot respondent view -->
+  <div class="screenshot-view" id="screenshotView">
+    <div class="screenshot-container">
+      <div class="screenshot-progress" id="screenshotProgress"></div>
+      <img class="screenshot-img" id="screenshotImg" alt="Screen">
+      <div id="screenshotQuestions"></div>
+      <div class="screenshot-actions">
+        <button class="btn-next" id="screenshotNext">Next</button>
+        <button class="btn-finish" id="screenshotFinish" style="display:none;">Finish</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -651,13 +772,15 @@ create policy "read videos"
       container.innerHTML = '';
       tests.forEach(function(test) {
         var count = countMap[test.id] || 0;
+        var isScreenshot = test.url === '__screenshots__';
         var date = new Date(test.created_at).toLocaleDateString('uk-UA', { day: 'numeric', month: 'long', year: 'numeric' });
         var card = document.createElement('div');
         card.className = 'test-card';
+        var typeLabel = isScreenshot ? '🖼 Скріншоти' : esc(test.url);
         card.innerHTML =
           '<div class="tc-info">' +
             '<div class="tc-name">' + esc(test.name || 'Без назви') + '</div>' +
-            '<div class="tc-url">' + esc(test.url) + '</div>' +
+            '<div class="tc-url">' + typeLabel + '</div>' +
             '<div class="tc-meta">' + date + (test.respondent_limit ? ' · ліміт: ' + test.respondent_limit : '') + '</div>' +
           '</div>' +
           '<div class="tc-count">' + count + ' відп.</div>';
@@ -675,12 +798,26 @@ create policy "read videos"
   async function openTestDetail(test, initialCount) {
     showPage('pageDetail');
     document.getElementById('detailName').textContent = test.name || 'Без назви';
-    document.getElementById('detailUrl').textContent = test.url;
+    var isScreenshot = test.url === '__screenshots__';
+    document.getElementById('detailUrl').textContent = isScreenshot ? '🖼 Тест скріншотів' : test.url;
 
-    var tasksHtml = '<h3>Завдання (' + test.tasks.length + ')</h3>';
-    test.tasks.forEach(function(t, i) {
-      tasksHtml += '<div class="detail-task-item"><span class="dt-type t-' + t.type + '">' + t.type + '</span>' + esc(t.text) + '</div>';
-    });
+    var tasksHtml = '';
+    if (isScreenshot) {
+      tasksHtml = '<h3>Екрани (' + test.tasks.length + ')</h3>';
+      test.tasks.forEach(function(screen, i) {
+        tasksHtml += '<div class="detail-screen-item">';
+        tasksHtml += '<img src="' + SB.videoUrl(screen.image) + '" alt="Screen ' + (i + 1) + '">';
+        screen.questions.forEach(function(q) {
+          tasksHtml += '<div class="detail-task-item"><span class="dt-type t-' + q.type + '">' + q.type + '</span>' + esc(q.text) + '</div>';
+        });
+        tasksHtml += '</div>';
+      });
+    } else {
+      tasksHtml = '<h3>Завдання (' + test.tasks.length + ')</h3>';
+      test.tasks.forEach(function(t, i) {
+        tasksHtml += '<div class="detail-task-item"><span class="dt-type t-' + t.type + '">' + t.type + '</span>' + esc(t.text) + '</div>';
+      });
+    }
     document.getElementById('detailTasks').innerHTML = tasksHtml;
 
     // Copy link
@@ -729,9 +866,33 @@ create policy "read videos"
   }
 
   // ===== CREATE TEST =====
+  var currentTestMode = 'website';
+  var screenFiles = []; // [{file: File, questions: [{type, text}]}]
+
   function initCreatePage() {
     var taskList = document.getElementById('taskList');
     taskList.innerHTML = '';
+    currentTestMode = 'website';
+    screenFiles = [];
+
+    // Type toggle
+    var toggleBtns = document.querySelectorAll('#testTypeToggle button');
+    toggleBtns.forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        toggleBtns.forEach(function(b) { b.classList.remove('active'); });
+        btn.classList.add('active');
+        currentTestMode = btn.dataset.mode;
+        document.getElementById('websiteFields').style.display = currentTestMode === 'website' ? '' : 'none';
+        document.getElementById('screenshotFields').style.display = currentTestMode === 'screenshots' ? '' : 'none';
+      });
+    });
+
+    // Reset toggle UI
+    toggleBtns.forEach(function(b) { b.classList.remove('active'); });
+    document.querySelector('#testTypeToggle button[data-mode="website"]').classList.add('active');
+    document.getElementById('websiteFields').style.display = '';
+    document.getElementById('screenshotFields').style.display = 'none';
+    document.getElementById('screenList').innerHTML = '';
 
     function autoResize(ta) {
       ta.style.height = 'auto';
@@ -790,36 +951,170 @@ create policy "read videos"
     addTaskRow('task', '');
     document.getElementById('addTaskBtn').onclick = function() { addTaskRow('task', ''); };
 
+    // Screen builder
+    function updateScreenNumbers() {
+      var cards = document.querySelectorAll('#screenList .screen-card');
+      cards.forEach(function(card, i) {
+        card.querySelector('.screen-num').textContent = 'Екран ' + (i + 1);
+        card.dataset.index = i;
+      });
+    }
+
+    function addScreenCard() {
+      var idx = screenFiles.length;
+      screenFiles.push({ file: null, questions: [] });
+
+      var card = document.createElement('div');
+      card.className = 'screen-card';
+      card.dataset.index = idx;
+
+      card.innerHTML =
+        '<div class="screen-header"><span class="screen-num">Екран ' + (idx + 1) + '</span><div class="spacer"></div><button class="btn-remove-screen" title="Видалити">&times;</button></div>' +
+        '<div class="screen-upload-area"><input type="file" accept="image/*"><div class="upload-placeholder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>Натисніть для завантаження</div></div>' +
+        '<div class="screen-questions-label">Питання до цього екрану</div>' +
+        '<div class="screen-q-list"></div>' +
+        '<button class="btn-add-question">+ Додати питання</button>';
+
+      var uploadArea = card.querySelector('.screen-upload-area');
+      var fileInput = card.querySelector('input[type="file"]');
+
+      uploadArea.addEventListener('click', function() { fileInput.click(); });
+      fileInput.addEventListener('change', function() {
+        if (this.files.length) {
+          var file = this.files[0];
+          var ci = parseInt(card.dataset.index);
+          screenFiles[ci].file = file;
+          uploadArea.classList.add('has-image');
+          uploadArea.innerHTML = '<img src="' + URL.createObjectURL(file) + '" alt="Screen">';
+          uploadArea.addEventListener('click', function() { fileInput.click(); });
+        }
+      });
+
+      card.querySelector('.btn-remove-screen').addEventListener('click', function() {
+        var ci = parseInt(card.dataset.index);
+        screenFiles.splice(ci, 1);
+        card.remove();
+        updateScreenNumbers();
+      });
+
+      card.querySelector('.btn-add-question').addEventListener('click', function() {
+        addQuestionToScreen(card);
+      });
+
+      document.getElementById('screenList').appendChild(card);
+      addQuestionToScreen(card);
+    }
+
+    function addQuestionToScreen(card) {
+      var qList = card.querySelector('.screen-q-list');
+      var qItem = document.createElement('div');
+      qItem.className = 'screen-q-item';
+      qItem.innerHTML =
+        '<select><option value="input">Input</option><option value="verbal">Verbal</option></select>' +
+        '<textarea rows="1" placeholder="Введіть питання…"></textarea>' +
+        '<button class="btn-remove" title="Видалити">&times;</button>';
+
+      var ta = qItem.querySelector('textarea');
+      ta.addEventListener('input', function() { autoResize(this); });
+      qItem.querySelector('.btn-remove').addEventListener('click', function() { qItem.remove(); });
+
+      qList.appendChild(qItem);
+      ta.focus();
+    }
+
+    document.getElementById('addScreenBtn').onclick = function() { addScreenCard(); };
+
+    // Create test
     document.getElementById('createBtn').onclick = async function() {
       var btn = this;
       var name = document.getElementById('testName').value.trim();
-      var url = document.getElementById('testUrl').value.trim();
-      if (!url) { alert('Введіть URL для тестування'); return; }
 
-      var items = taskList.querySelectorAll('.task-item'), tasks = [];
-      for (var i = 0; i < items.length; i++) {
-        var t = items[i].querySelector('textarea').value.trim();
-        if (t) tasks.push({ type: items[i].querySelector('select').value, text: t });
-      }
-      if (!tasks.length) { alert('Додайте хоча б одне завдання'); return; }
+      if (currentTestMode === 'website') {
+        // Website test creation (existing logic)
+        var url = document.getElementById('testUrl').value.trim();
+        if (!url) { alert('Введіть URL для тестування'); return; }
 
-      var limitVal = parseInt(document.getElementById('respondentLimit').value) || null;
+        var items = taskList.querySelectorAll('.task-item'), tasks = [];
+        for (var i = 0; i < items.length; i++) {
+          var t = items[i].querySelector('textarea').value.trim();
+          if (t) tasks.push({ type: items[i].querySelector('select').value, text: t });
+        }
+        if (!tasks.length) { alert('Додайте хоча б одне завдання'); return; }
 
-      btn.disabled = true; btn.textContent = 'Створення…';
-      try {
-        var result = await SB.post('/rest/v1/tests', {
-          name: name || url.replace(/^https?:\/\//, '').slice(0, 40),
-          url: url, tasks: tasks, respondent_limit: limitVal
+        var limitVal = parseInt(document.getElementById('respondentLimit').value) || null;
+
+        btn.disabled = true; btn.textContent = 'Створення…';
+        try {
+          var result = await SB.post('/rest/v1/tests', {
+            name: name || url.replace(/^https?:\/\//, '').slice(0, 40),
+            url: url, tasks: tasks, respondent_limit: limitVal
+          });
+          var test = result[0];
+          var cfg = { t: test.id, s: SB.url, k: SB.key };
+          var link = location.origin + location.pathname + '#' + encodeConfig(cfg);
+          document.getElementById('createLink').value = link;
+          document.getElementById('createResult').classList.add('visible');
+        } catch(e) {
+          alert('Помилка: ' + e.message);
+        }
+        btn.disabled = false; btn.textContent = 'Створити тест';
+
+      } else {
+        // Screenshot test creation
+        var screenCards = document.querySelectorAll('#screenList .screen-card');
+        if (!screenCards.length) { alert('Додайте хоча б один екран'); return; }
+
+        // Gather screens data
+        var screens = [];
+        var valid = true;
+        screenCards.forEach(function(card, i) {
+          var ci = parseInt(card.dataset.index);
+          var sf = screenFiles[ci];
+          if (!sf || !sf.file) { alert('Завантажте зображення для екрану ' + (i + 1)); valid = false; return; }
+
+          var questions = [];
+          card.querySelectorAll('.screen-q-item').forEach(function(qi) {
+            var t = qi.querySelector('textarea').value.trim();
+            if (t) questions.push({ type: qi.querySelector('select').value, text: t });
+          });
+          if (!questions.length) { alert('Додайте хоча б одне питання для екрану ' + (i + 1)); valid = false; return; }
+
+          screens.push({ file: sf.file, questions: questions });
         });
-        var test = result[0];
-        var cfg = { t: test.id, s: SB.url, k: SB.key };
-        var link = location.origin + location.pathname + '#' + encodeConfig(cfg);
-        document.getElementById('createLink').value = link;
-        document.getElementById('createResult').classList.add('visible');
-      } catch(e) {
-        alert('Помилка: ' + e.message);
+        if (!valid) return;
+
+        var limitVal = parseInt(document.getElementById('respondentLimit').value) || null;
+        var testId = crypto.randomUUID();
+
+        btn.disabled = true; btn.textContent = 'Завантаження зображень…';
+        try {
+          // Upload images
+          var tasks = [];
+          for (var i = 0; i < screens.length; i++) {
+            var ext = screens[i].file.name.split('.').pop() || 'png';
+            var imgPath = 'screens/' + testId + '/' + i + '.' + ext;
+            await SB.upload(imgPath, screens[i].file);
+            tasks.push({ image: imgPath, questions: screens[i].questions });
+          }
+
+          btn.textContent = 'Створення…';
+          var result = await SB.post('/rest/v1/tests', {
+            id: testId,
+            name: name || 'Тест скріншотів',
+            url: '__screenshots__',
+            tasks: tasks,
+            respondent_limit: limitVal
+          });
+          var test = result[0];
+          var cfg = { t: test.id, s: SB.url, k: SB.key };
+          var link = location.origin + location.pathname + '#' + encodeConfig(cfg);
+          document.getElementById('createLink').value = link;
+          document.getElementById('createResult').classList.add('visible');
+        } catch(e) {
+          alert('Помилка: ' + e.message);
+        }
+        btn.disabled = false; btn.textContent = 'Створити тест';
       }
-      btn.disabled = false; btn.textContent = 'Створити тест';
     };
 
     document.getElementById('createCopy').onclick = function() {
@@ -853,25 +1148,115 @@ create policy "read videos"
       testData = rows[0];
       tasks = testData.tasks;
 
+      var isScreenshot = testData.url === '__screenshots__';
+
       // Check limit
       if (testData.respondent_limit) {
         sb.get('/rest/v1/responses?test_id=eq.' + cfg.t + '&select=id').then(function(resps) {
           if (resps.length >= testData.respondent_limit) closedScreen.style.display = 'flex';
+          else if (isScreenshot) showScreenshotWelcome();
           else showWelcome();
-        }).catch(function() { showWelcome(); });
+        }).catch(function() { isScreenshot ? showScreenshotWelcome() : showWelcome(); });
       } else {
-        showWelcome();
+        isScreenshot ? showScreenshotWelcome() : showWelcome();
       }
     }).catch(function() {
       closedScreen.style.display = 'flex';
     });
 
+    // ---- Screenshot respondent ----
+    function showScreenshotWelcome() {
+      welcomeScreen.style.display = 'flex';
+      var perms = document.querySelector('.welcome-card .permissions');
+      perms.innerHTML = '<span>You will view screenshots and answer questions about each one.</span>';
+      $('welcomeTaskCount').textContent = 'You will review ' + tasks.length + ' screen' + (tasks.length > 1 ? 's' : '') + '.';
+      startBtn.textContent = 'Start';
+      startBtn.onclick = function() { startScreenshotTest(); };
+    }
+
+    var screenshotAnswers = {}; // { "0_0": {q, a}, "0_1": {q, a}, ... }
+    var currentScreen = 0;
+    var screenshotBaseUrl = cfg.s + '/storage/v1/object/public/videos/';
+
+    function startScreenshotTest() {
+      welcomeScreen.style.display = 'none';
+      $('screenshotView').classList.add('visible');
+      showScreen(0);
+    }
+
+    function showScreen(idx) {
+      currentScreen = idx;
+      var screen = tasks[idx];
+      $('screenshotProgress').textContent = 'Screen ' + (idx + 1) + ' of ' + tasks.length;
+      $('screenshotImg').src = screenshotBaseUrl + screen.image;
+
+      var qContainer = $('screenshotQuestions');
+      qContainer.innerHTML = '';
+      screen.questions.forEach(function(q, qi) {
+        var div = document.createElement('div');
+        div.className = 'screenshot-question';
+        var typeLabel = q.type === 'input' ? 'Input' : 'Verbal';
+        var typeCls = q.type === 'input' ? 't-input' : 't-verbal';
+        div.innerHTML =
+          '<div class="sq-label"><span class="sq-type ' + typeCls + '">' + typeLabel + '</span>' + esc(q.text) + '</div>' +
+          '<textarea placeholder="Type your answer here…" data-screen="' + idx + '" data-q="' + qi + '"></textarea>';
+        var ta = div.querySelector('textarea');
+        // Restore previous answer if exists
+        var key = idx + '_' + qi;
+        if (screenshotAnswers[key]) ta.value = screenshotAnswers[key].a;
+        qContainer.appendChild(div);
+      });
+
+      var sNext = $('screenshotNext');
+      var sFinish = $('screenshotFinish');
+      sNext.style.display = idx < tasks.length - 1 ? 'inline-block' : 'none';
+      sFinish.style.display = idx === tasks.length - 1 ? 'inline-block' : 'none';
+    }
+
+    function saveScreenAnswers() {
+      var tas = $('screenshotQuestions').querySelectorAll('textarea');
+      tas.forEach(function(ta) {
+        var si = ta.dataset.screen, qi = ta.dataset.q;
+        var v = ta.value.trim();
+        if (v) {
+          screenshotAnswers[si + '_' + qi] = { q: tasks[si].questions[qi].text, a: v };
+        }
+      });
+    }
+
+    $('screenshotNext').addEventListener('click', function() {
+      saveScreenAnswers();
+      if (currentScreen < tasks.length - 1) showScreen(currentScreen + 1);
+    });
+
+    $('screenshotFinish').addEventListener('click', async function() {
+      saveScreenAnswers();
+      $('screenshotView').classList.remove('visible');
+      doneScreen.classList.add('visible');
+      uploadStatus.textContent = 'Saving…';
+
+      try {
+        var respId = crypto.randomUUID();
+        await sb.post('/rest/v1/responses', {
+          id: respId, test_id: cfg.t, video_path: null,
+          answers: Object.keys(screenshotAnswers).length ? screenshotAnswers : null
+        });
+        uploadStatus.textContent = 'Done! Thank you for participating.';
+        uploadStatus.className = 'upload-status success';
+      } catch(err) {
+        uploadStatus.textContent = 'Error: ' + err.message;
+        uploadStatus.className = 'upload-status error';
+      }
+    });
+
+    // ---- Website respondent (existing) ----
     function showWelcome() {
       welcomeScreen.style.display = 'flex';
       $('welcomeTaskCount').textContent = 'You will complete ' + tasks.length + ' step' + (tasks.length > 1 ? 's' : '') + '. Please think aloud as you go.';
+      startBtn.onclick = startWebsiteTest;
     }
 
-    startBtn.addEventListener('click', async function() {
+    async function startWebsiteTest() {
       startBtn.disabled = true; startBtn.textContent = 'Requesting permissions…';
       try {
         var screen = await navigator.mediaDevices.getDisplayMedia({ video: { displaySurface: 'browser' }, audio: true });
@@ -904,7 +1289,7 @@ create policy "read videos"
         startBtn.disabled = false; startBtn.textContent = 'Start';
         alert('Could not get permissions. Please try again.');
       }
-    });
+    }
 
     function getBestMime() {
       var t = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'];
