@@ -302,12 +302,12 @@
   /* ===== SCREENSHOT RESPONDENT ===== */
   .screenshot-view { position: fixed; inset: 0; background: #f5f5f5; display: none; z-index: 100; overflow-y: auto; }
   .screenshot-view.visible { display: block; }
-  .screenshot-container { max-width: 1100px; margin: 0 auto; padding: 32px 20px; }
+  .screenshot-container { max-width: 1200px; margin: 0 auto; padding: 32px 20px; }
   .screenshot-progress { font-size: 12px; color: #888; margin-bottom: 12px; }
   .screenshot-split { display: flex; gap: 32px; align-items: flex-start; }
-  .screenshot-left { flex: 1; min-width: 0; position: sticky; top: 32px; }
+  .screenshot-left { flex: 3; min-width: 0; position: sticky; top: 32px; }
   .screenshot-img { width: 100%; border-radius: 10px; box-shadow: 0 2px 12px rgba(0,0,0,.1); }
-  .screenshot-right { width: 360px; flex-shrink: 0; }
+  .screenshot-right { flex: 1; min-width: 280px; }
   .screenshot-question { margin-bottom: 16px; }
   .screenshot-question .sq-label { font-size: 15px; font-weight: 500; margin-bottom: 8px; color: #333; line-height: 1.5; }
   .screenshot-question .sq-type { display: inline-block; font-size: 10px; font-weight: 700; text-transform: uppercase; padding: 2px 6px; border-radius: 4px; color: #fff; margin-right: 6px; vertical-align: middle; }
@@ -352,8 +352,8 @@
     .overlay-action { flex-direction: column; }
     .btn-next, .btn-finish { width: 100%; padding: 12px; font-size: 14px; text-align: center; }
 
-    /* Test frame on mobile — override inset:0 */
-    .test-frame { inset: auto !important; top: 0 !important; left: 0 !important; right: 0 !important; width: 100% !important; height: 50vh !important; bottom: auto !important; }
+    /* Test frame on mobile — full screen, overlay floats on top */
+    .test-frame { inset: 0 !important; width: 100% !important; height: 100% !important; }
 
     /* Screenshot respondent */
     .screenshot-container { padding: 20px 16px; }
@@ -497,6 +497,14 @@ create policy "read videos"
       </div>
     </div>
     <div class="field">
+      <label>Пристрій</label>
+      <div class="hint">На якому пристрої буде проходити тест.</div>
+      <div class="type-toggle" id="deviceToggle">
+        <button class="active" data-device="desktop">🖥 Desktop</button>
+        <button data-device="mobile">📱 Mobile</button>
+      </div>
+    </div>
+    <div class="field">
       <label>Ліміт респондентів</label>
       <div class="hint">Залиште порожнім для необмеженого доступу.</div>
       <input type="number" id="respondentLimit" min="1" placeholder="Напр. 10">
@@ -524,6 +532,7 @@ create policy "read videos"
     <div class="detail-tasks" id="detailTasks"></div>
     <div class="detail-actions">
       <button class="btn btn-dark" id="detailCopyLink">Копіювати посилання</button>
+      <button class="btn btn-outline" id="detailExport">⬇ Завантажити відповіді</button>
     </div>
     <div class="responses-title" id="responsesTitle"></div>
     <div id="responsesList"></div>
@@ -734,10 +743,13 @@ create policy "read videos"
   }
 
   // ===== ROUTING =====
-  function showPage(id) {
+  function showPage(id, pushHistory) {
     document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
     document.getElementById(id).classList.add('active');
     document.body.style.background = id === 'pageRespondent' ? '#fff' : '#f5f5f5';
+    if (pushHistory && id !== 'pageRespondent') {
+      history.pushState({ page: id }, '', '');
+    }
   }
 
   SB.init();
@@ -758,10 +770,23 @@ create policy "read videos"
     loadDashboard();
     initCreatePage();
 
-    document.getElementById('btnNewTest').addEventListener('click', function() { showPage('pageCreate'); });
-    document.getElementById('backFromCreate').addEventListener('click', function() { showPage('pageDashboard'); loadDashboard(); });
-    document.getElementById('backFromDetail').addEventListener('click', function() { showPage('pageDashboard'); loadDashboard(); });
-    document.getElementById('btnSettings').addEventListener('click', function() { showPage('pageSetup'); initSetup(); });
+    document.getElementById('btnNewTest').addEventListener('click', function() { showPage('pageCreate', true); });
+    document.getElementById('backFromCreate').addEventListener('click', function() { history.back(); });
+    document.getElementById('backFromDetail').addEventListener('click', function() { history.back(); });
+    document.getElementById('btnSettings').addEventListener('click', function() { showPage('pageSetup', true); initSetup(); });
+
+    // Handle browser back/forward
+    window.addEventListener('popstate', function(e) {
+      if (e.state && e.state.page) {
+        showPage(e.state.page);
+        if (e.state.page === 'pageDashboard') loadDashboard();
+      } else {
+        showPage('pageDashboard');
+        loadDashboard();
+      }
+    });
+    // Set initial state
+    history.replaceState({ page: 'pageDashboard' }, '', '');
   }
 
   // ===== SETUP =====
@@ -856,7 +881,7 @@ create policy "read videos"
 
   // ===== TEST DETAIL =====
   async function openTestDetail(test, initialCount) {
-    showPage('pageDetail');
+    showPage('pageDetail', true);
     document.getElementById('detailName').textContent = test.name || 'Без назви';
     var isScreenshot = test.url === '__screenshots__';
     document.getElementById('detailUrl').textContent = isScreenshot ? '🖼 Тест скріншотів' : test.url;
@@ -889,6 +914,50 @@ create policy "read videos"
         btn.textContent = 'Скопійовано!';
         setTimeout(function() { btn.textContent = 'Копіювати посилання'; }, 2000);
       });
+    };
+
+    // Export responses as CSV
+    document.getElementById('detailExport').onclick = async function() {
+      var btn = this;
+      btn.disabled = true; btn.textContent = '⏳ Завантаження…';
+      try {
+        var responses = await SB.get('/rest/v1/responses?test_id=eq.' + test.id + '&select=*&order=created_at.desc');
+        if (!responses.length) { alert('Немає відповідей для експорту'); btn.disabled = false; btn.textContent = '⬇ Завантажити відповіді'; return; }
+
+        // Collect all unique question keys
+        var allKeys = {};
+        responses.forEach(function(r) {
+          if (r.answers) Object.keys(r.answers).forEach(function(k) { allKeys[k] = r.answers[k].q; });
+        });
+        var keys = Object.keys(allKeys);
+
+        // Build CSV
+        var csvRows = [];
+        var header = ['Дата', 'Відео/Аудіо'];
+        keys.forEach(function(k) { header.push(allKeys[k]); });
+        csvRows.push(header.map(csvEsc).join(','));
+
+        responses.forEach(function(r) {
+          var row = [
+            new Date(r.created_at).toLocaleString('uk-UA'),
+            r.video_path ? SB.videoUrl(r.video_path) : ''
+          ];
+          keys.forEach(function(k) {
+            row.push(r.answers && r.answers[k] ? r.answers[k].a : '');
+          });
+          csvRows.push(row.map(csvEsc).join(','));
+        });
+
+        var csv = '\uFEFF' + csvRows.join('\n'); // BOM for Excel UTF-8
+        var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        var a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = (test.name || 'test') + '_responses.csv';
+        a.click();
+      } catch(e) {
+        alert('Помилка: ' + e.message);
+      }
+      btn.disabled = false; btn.textContent = '⬇ Завантажити відповіді';
     };
 
     // Load responses
@@ -925,14 +994,24 @@ create policy "read videos"
     }
   }
 
+  function csvEsc(val) {
+    val = String(val || '');
+    if (val.indexOf(',') !== -1 || val.indexOf('"') !== -1 || val.indexOf('\n') !== -1) {
+      return '"' + val.replace(/"/g, '""') + '"';
+    }
+    return val;
+  }
+
   // ===== CREATE TEST =====
   var currentTestMode = 'website';
+  var currentDevice = 'desktop';
   var screenFiles = []; // [{file: File, questions: [{type, text}]}]
 
   function initCreatePage() {
     var taskList = document.getElementById('taskList');
     taskList.innerHTML = '';
     currentTestMode = 'website';
+    currentDevice = 'desktop';
     screenFiles = [];
 
     // Type toggle
@@ -946,6 +1025,18 @@ create policy "read videos"
         document.getElementById('screenshotFields').style.display = currentTestMode === 'screenshots' ? '' : 'none';
       });
     });
+
+    // Device toggle
+    var deviceBtns = document.querySelectorAll('#deviceToggle button');
+    deviceBtns.forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        deviceBtns.forEach(function(b) { b.classList.remove('active'); });
+        btn.classList.add('active');
+        currentDevice = btn.dataset.device;
+      });
+    });
+    deviceBtns.forEach(function(b) { b.classList.remove('active'); });
+    document.querySelector('#deviceToggle button[data-device="desktop"]').classList.add('active');
 
     // Reset toggle UI
     toggleBtns.forEach(function(b) { b.classList.remove('active'); });
@@ -1105,12 +1196,13 @@ create policy "read videos"
 
         btn.disabled = true; btn.textContent = 'Створення…';
         try {
+          var deviceLabel = currentDevice === 'mobile' ? '📱 ' : '🖥 ';
           var result = await SB.post('/rest/v1/tests', {
-            name: name || url.replace(/^https?:\/\//, '').slice(0, 40),
+            name: deviceLabel + (name || url.replace(/^https?:\/\//, '').slice(0, 40)),
             url: url, tasks: tasks, respondent_limit: limitVal
           });
           var test = result[0];
-          var cfg = { t: test.id, s: SB.url, k: SB.key };
+          var cfg = { t: test.id, s: SB.url, k: SB.key, d: currentDevice };
           var link = location.origin + location.pathname + '#' + encodeConfig(cfg);
           document.getElementById('createLink').value = link;
           document.getElementById('createResult').classList.add('visible');
@@ -1158,15 +1250,16 @@ create policy "read videos"
           }
 
           btn.textContent = 'Створення…';
+          var deviceLabel = currentDevice === 'mobile' ? '📱 ' : '🖥 ';
           var result = await SB.post('/rest/v1/tests', {
             id: testId,
-            name: name || 'Тест скріншотів',
+            name: deviceLabel + (name || 'Тест скріншотів'),
             url: '__screenshots__',
             tasks: tasks,
             respondent_limit: limitVal
           });
           var test = result[0];
-          var cfg = { t: test.id, s: SB.url, k: SB.key };
+          var cfg = { t: test.id, s: SB.url, k: SB.key, d: currentDevice };
           var link = location.origin + location.pathname + '#' + encodeConfig(cfg);
           document.getElementById('createLink').value = link;
           document.getElementById('createResult').classList.add('visible');
