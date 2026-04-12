@@ -1362,8 +1362,8 @@ create policy "read videos"
       welcomeScreen.style.display = 'flex';
       var perms = document.querySelector('.welcome-card .permissions');
       if (isMobile) {
-        $('welcomeTaskCount').textContent = 'You will complete ' + tasks.length + ' step' + (tasks.length > 1 ? 's' : '') + '.';
-        perms.innerHTML = '<span>You will interact with a website and complete tasks.</span><span>No screen recording on mobile — only your answers will be saved.</span>';
+        $('welcomeTaskCount').textContent = 'You will complete ' + tasks.length + ' step' + (tasks.length > 1 ? 's' : '') + '. Please think aloud as you go.';
+        perms.innerHTML = '<span>After clicking "Start", your browser will ask permission for:</span><span>• Microphone access (to record your voice)</span>';
       } else {
         $('welcomeTaskCount').textContent = 'You will complete ' + tasks.length + ' step' + (tasks.length > 1 ? 's' : '') + '. Please think aloud as you go.';
         perms.innerHTML = '<span>After clicking "Start", your browser will ask permission for:</span><span>• Screen recording</span><span>• Microphone access</span>';
@@ -1371,14 +1371,28 @@ create policy "read videos"
       startBtn.onclick = isMobile ? startMobileWebsiteTest : startWebsiteTest;
     }
 
-    // Mobile: no screen recording, open site in iframe, show overlay
-    function startMobileWebsiteTest() {
-      welcomeScreen.style.display = 'none';
-      overlay.style.display = 'block';
-      testFrame.src = testData.url;
-      recDot.classList.add('idle');
-      timerEl.textContent = '';
-      showTask(0);
+    // Mobile: mic-only recording, open site in iframe, show overlay
+    async function startMobileWebsiteTest() {
+      startBtn.disabled = true; startBtn.textContent = 'Requesting permissions…';
+      try {
+        var mic = await navigator.mediaDevices.getUserMedia({ audio: true });
+        var mimeAudio = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm';
+        recorder = new MediaRecorder(mic, { mimeType: mimeAudio });
+        recorder.ondataavailable = function(e) { if (e.data.size > 0) chunks.push(e.data); };
+        recorder.onstop = function() { handleDone(new Blob(chunks, { type: recorder.mimeType })); };
+        recorder.start(1000);
+
+        welcomeScreen.style.display = 'none';
+        overlay.style.display = 'block';
+        testFrame.src = testData.url;
+        recDot.classList.remove('idle');
+        startTime = Date.now();
+        timerInterval = setInterval(updateTimer, 1000);
+        showTask(0);
+      } catch(err) {
+        startBtn.disabled = false; startBtn.textContent = 'Start';
+        alert('Could not access microphone. Please try again.');
+      }
     }
 
     async function startWebsiteTest() {
@@ -1457,31 +1471,12 @@ create policy "read videos"
       if (recorder && recorder.state !== 'inactive') {
         recorder.stop();
         recorder.stream.getTracks().forEach(function(t) { t.stop(); });
-      } else if (isMobile) {
-        // Mobile: no recording, just save answers
-        handleMobileDone();
       }
       if (timerInterval) clearInterval(timerInterval);
       recDot.classList.add('idle');
       overlay.style.display = 'none';
       testFrame.style.display = 'none';
       doneScreen.classList.add('visible');
-    }
-
-    async function handleMobileDone() {
-      uploadStatus.textContent = 'Saving…';
-      try {
-        var respId = crypto.randomUUID();
-        await sb.post('/rest/v1/responses', {
-          id: respId, test_id: cfg.t, video_path: null,
-          answers: Object.keys(inputAnswers).length ? inputAnswers : null
-        });
-        uploadStatus.textContent = 'Done! Thank you for participating.';
-        uploadStatus.className = 'upload-status success';
-      } catch(err) {
-        uploadStatus.textContent = 'Error: ' + err.message;
-        uploadStatus.className = 'upload-status error';
-      }
     }
 
     function updateTimer() {
@@ -1495,7 +1490,7 @@ create policy "read videos"
       var videoPath = cfg.t + '/' + respId + '.webm';
 
       try {
-        uploadStatus.textContent = 'Uploading video…';
+        uploadStatus.textContent = 'Uploading recording…';
         await sb.upload(videoPath, blob);
 
         uploadStatus.textContent = 'Saving response…';
