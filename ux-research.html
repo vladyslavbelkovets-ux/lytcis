@@ -976,12 +976,17 @@ create policy "read videos"
       var btn = this;
       btn.disabled = true; btn.textContent = '🗑 Видалення…';
       try {
-        await fetch(SB.url + '/rest/v1/responses?test_id=eq.' + test.id, { method: 'DELETE', headers: SB.headers() });
-        await fetch(SB.url + '/rest/v1/tests?id=eq.' + test.id, { method: 'DELETE', headers: SB.headers() });
+        var hdr = SB.headers({ 'Prefer': 'return=representation' });
+        var r1 = await fetch(SB.url + '/rest/v1/responses?test_id=eq.' + test.id, { method: 'DELETE', headers: hdr });
+        if (!r1.ok) throw new Error('Не вдалось видалити відповіді: ' + r1.status + ' ' + (await r1.text()));
+        var r2 = await fetch(SB.url + '/rest/v1/tests?id=eq.' + test.id, { method: 'DELETE', headers: hdr });
+        if (!r2.ok) throw new Error('Не вдалось видалити тест: ' + r2.status + ' ' + (await r2.text()));
+        var deleted = await r2.json();
+        if (!deleted || !deleted.length) throw new Error('Тест не видалено — ймовірно немає DELETE policy в Supabase. Додайте policy для tests і responses.');
         showPage('pageDashboard', true);
         loadDashboard();
       } catch(e) {
-        alert('Помилка: ' + e.message);
+        alert('Помилка видалення: ' + e.message);
         btn.disabled = false; btn.textContent = '🗑 Видалити';
       }
     };
