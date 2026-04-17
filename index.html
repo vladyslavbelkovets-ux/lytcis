@@ -923,7 +923,7 @@ create policy "read videos"
       <div class="fs-modal-counter" id="fsCounter"></div>
       <div class="fs-modal-badge" id="fsBadge"></div>
       <div class="fs-modal-text" id="fsText"></div>
-      <button class="fs-modal-btn" id="fsBtn">Got it</button>
+      <button class="fs-modal-btn" id="fsBtn">DONE</button>
     </div>
   </div>
 
@@ -2398,7 +2398,7 @@ create policy "read videos"
         fsText.textContent = task.text;
         fsBadge.innerHTML = ICON_SCENARIO + ' Fullscreen';
         fsRec.innerHTML = '<div class="rec-dot" style="width:7px;height:7px;background:#f44;border-radius:50%;animation:recBlink 1s infinite;display:inline-block;margin-right:6px;"></div> Recording';
-        fsBtn.textContent = isLast ? 'Finish test' : 'Got it →';
+        fsBtn.textContent = isLast ? 'Finish test' : 'DONE';
         fsModal.style.display = 'flex';
         fsBtn.onclick = function() {
           fsModal.style.display = 'none';
