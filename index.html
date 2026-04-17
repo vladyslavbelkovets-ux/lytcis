@@ -756,6 +756,7 @@ create policy "read videos"
     <div class="detail-tasks" id="detailTasks"></div>
     <div class="detail-actions">
       <button class="btn btn-dark" id="detailCopyLink">Копіювати посилання</button>
+      <button class="btn btn-outline" id="detailEdit">✏️ Редагувати</button>
       <button class="btn btn-outline" id="detailExport">⬇ Завантажити відповіді</button>
       <button class="btn btn-danger" id="detailDelete">🗑 Видалити</button>
     </div>
@@ -1023,7 +1024,16 @@ create policy "read videos"
     initCreatePage();
 
     document.getElementById('btnNewTest').addEventListener('click', function() { showPage('pageCreate', true); });
-    document.getElementById('backFromCreate').addEventListener('click', function() { showPage('pageDashboard'); loadDashboard(); });
+    document.getElementById('backFromCreate').addEventListener('click', function() {
+      if (currentEditTest) {
+        // Return to this test's detail page
+        var t = currentEditTest; currentEditTest = null;
+        document.querySelector('#pageCreate h2').textContent = 'Новий тест';
+        showPage('pageDetail'); // already loaded
+      } else {
+        showPage('pageDashboard'); loadDashboard();
+      }
+    });
     document.getElementById('backFromDetail').addEventListener('click', function() { showPage('pageDashboard'); loadDashboard(); });
     document.getElementById('btnSettings').addEventListener('click', function() { showPage('pageSetup', true); initSetup(); });
 
@@ -1080,7 +1090,16 @@ create policy "read videos"
         loadDashboard();
         initCreatePage();
         document.getElementById('btnNewTest').addEventListener('click', function() { showPage('pageCreate'); });
-        document.getElementById('backFromCreate').addEventListener('click', function() { showPage('pageDashboard'); loadDashboard(); });
+        document.getElementById('backFromCreate').addEventListener('click', function() {
+      if (currentEditTest) {
+        // Return to this test's detail page
+        var t = currentEditTest; currentEditTest = null;
+        document.querySelector('#pageCreate h2').textContent = 'Новий тест';
+        showPage('pageDetail'); // already loaded
+      } else {
+        showPage('pageDashboard'); loadDashboard();
+      }
+    });
         document.getElementById('backFromDetail').addEventListener('click', function() { showPage('pageDashboard'); loadDashboard(); });
         document.getElementById('btnSettings').addEventListener('click', function() { showPage('pageSetup'); initSetup(); });
       } catch(e) {
@@ -1187,6 +1206,9 @@ create policy "read videos"
       });
     }
     document.getElementById('detailTasks').innerHTML = tasksHtml;
+
+    // Edit test
+    document.getElementById('detailEdit').onclick = function() { openEditPage(test); };
 
     // Copy link
     document.getElementById('detailCopyLink').onclick = function() {
@@ -1315,6 +1337,135 @@ create policy "read videos"
     }
   }
 
+  // ===== EDIT TEST =====
+  function openEditPage(test) {
+    currentEditTest = test;
+    initCreatePage(); // resets form and exposes _addTaskRow etc.
+
+    // Update page title and button
+    document.querySelector('#pageCreate h2').textContent = 'Редагувати тест';
+    var createBtn = document.getElementById('createBtn');
+    createBtn.textContent = 'Зберегти зміни';
+    document.getElementById('createResult').classList.remove('visible');
+
+    // Pre-fill name (strip device emoji prefix)
+    var rawName = (test.name || '').replace(/^[\uD800-\uDFFF\u2600-\u27BF\u{1F300}-\u{1FFFF} ]+/u, '').trim();
+    document.getElementById('testName').value = rawName;
+
+    // Pre-fill URL
+    if (test.url && test.url !== '__screenshots__') {
+      document.getElementById('testUrl').value = test.url;
+    }
+
+    // Pre-fill respondent limit
+    document.getElementById('respondentLimit').value = test.respondent_limit || '';
+
+    // Parse tasks format
+    var rawTasks = test.tasks;
+    var actualTasks = Array.isArray(rawTasks) ? rawTasks : (rawTasks.tasks || []);
+    var existingScreening = Array.isArray(rawTasks) ? [] : (rawTasks.screening || []);
+
+    // Pre-fill tasks (clear default empty row first)
+    var taskList = document.getElementById('taskList');
+    taskList.innerHTML = '';
+    if (actualTasks.length) {
+      actualTasks.forEach(function(t) {
+        _addTaskRow(t.type === 'scenario' ? 'fullscreen' : (t.type || 'task'), t.text);
+      });
+    } else {
+      _addTaskRow('task', '');
+    }
+
+    // Pre-fill screening
+    if (existingScreening.length) {
+      var stBtn = document.getElementById('screeningToggleBtn');
+      stBtn.dataset.on = 'true';
+      stBtn.textContent = '✓ Додано';
+      document.getElementById('screeningSection').style.display = 'block';
+      var screeningList = document.getElementById('screeningList');
+      screeningList.innerHTML = '';
+      existingScreening.forEach(function(sq) {
+        _addScreeningQuestion();
+        var items = screeningList.querySelectorAll('.screening-item');
+        var item = items[items.length - 1];
+        var qta = item.querySelector('.sq-question');
+        qta.value = sq.q;
+        // Replace default empty options with actual ones
+        item.querySelector('.sq-options-list').innerHTML = '';
+        (sq.options || []).forEach(function(opt, i) {
+          _addScreeningOption(item);
+          var rows = item.querySelectorAll('.screening-option-row');
+          var row = rows[rows.length - 1];
+          row.querySelector('input[type=text]').value = opt;
+          if ((sq.qualify || []).indexOf(i) !== -1) {
+            row.querySelector('input[type=checkbox]').checked = true;
+          }
+        });
+      });
+    }
+
+    // Override createBtn to PATCH instead of POST
+    createBtn.onclick = async function() {
+      var btn = this;
+      var name = document.getElementById('testName').value.trim();
+      var url = document.getElementById('testUrl').value.trim();
+      var limitVal = parseInt(document.getElementById('respondentLimit').value) || null;
+
+      var items = taskList.querySelectorAll('.task-item'), tasks = [];
+      for (var i = 0; i < items.length; i++) {
+        var t = items[i].querySelector('textarea').value.trim();
+        if (t) tasks.push({ type: items[i].querySelector('select').value, text: t });
+      }
+      if (!tasks.length) { alert('Додайте хоча б одне завдання'); return; }
+
+      var screening = collectScreening();
+      var tasksData = screening.length ? { screening: screening, tasks: tasks } : tasks;
+
+      btn.disabled = true; btn.textContent = 'Збереження…';
+      try {
+        var hdr = SB.headers({ 'Prefer': 'return=representation', 'Content-Type': 'application/json' });
+        var patchBody = { tasks: tasksData, respondent_limit: limitVal };
+        if (name) patchBody.name = name;
+        if (url) patchBody.url = url;
+
+        var r = await fetch(SB.url + '/rest/v1/tests?id=eq.' + currentEditTest.id, {
+          method: 'PATCH', headers: hdr, body: JSON.stringify(patchBody)
+        });
+        if (!r.ok) throw new Error('HTTP ' + r.status + ': ' + await r.text());
+        var updated = await r.json();
+        if (!updated || !updated.length) throw new Error('Не вдалось оновити — можливо немає UPDATE policy в Supabase.');
+
+        // Reset edit mode and go back to detail
+        currentEditTest = null;
+        document.querySelector('#pageCreate h2').textContent = 'Новий тест';
+        showPage('pageDashboard');
+        await openTestDetail(updated[0], 0);
+      } catch(e) {
+        alert('Помилка збереження: ' + e.message);
+        btn.disabled = false; btn.textContent = 'Зберегти зміни';
+      }
+    };
+
+    showPage('pageCreate', true);
+  }
+
+  function collectScreening() {
+    var questions = [];
+    document.querySelectorAll('#screeningList .screening-item').forEach(function(item) {
+      var q = item.querySelector('.sq-question').value.trim();
+      if (!q) return;
+      var options = [], qualify = [];
+      item.querySelectorAll('.screening-option-row').forEach(function(row) {
+        var text = row.querySelector('input[type=text]').value.trim();
+        if (!text) return;
+        options.push(text);
+        if (row.querySelector('input[type=checkbox]').checked) qualify.push(options.length - 1);
+      });
+      if (options.length) questions.push({ q: q, options: options, qualify: qualify });
+    });
+    return questions;
+  }
+
   function csvEsc(val) {
     val = String(val || '');
     if (val.indexOf(',') !== -1 || val.indexOf('"') !== -1 || val.indexOf('\n') !== -1) {
@@ -1327,6 +1478,8 @@ create policy "read videos"
   var currentTestMode = 'website';
   var currentDevice = 'desktop';
   var screenFiles = []; // [{file: File, questions: [{type, text}]}]
+  var currentEditTest = null; // set when editing an existing test
+  var _addTaskRow, _addScreeningQuestion, _addScreeningOption; // exposed from initCreatePage
 
   function initCreatePage() {
     var taskList = document.getElementById('taskList');
@@ -1521,6 +1674,10 @@ create policy "read videos"
     }
 
     document.getElementById('addScreeningBtn').onclick = function() { addScreeningQuestion(); };
+    // Expose to outer scope for edit mode
+    _addTaskRow = addTaskRow;
+    _addScreeningQuestion = addScreeningQuestion;
+    _addScreeningOption = addScreeningOption;
 
     // Screening toggle
     var screeningToggleBtn = document.getElementById('screeningToggleBtn');
@@ -1613,23 +1770,6 @@ create policy "read videos"
     }
 
     document.getElementById('addScreenBtn').onclick = function() { addScreenCard(); };
-
-    function collectScreening() {
-      var questions = [];
-      document.querySelectorAll('#screeningList .screening-item').forEach(function(item) {
-        var q = item.querySelector('.sq-question').value.trim();
-        if (!q) return;
-        var options = [], qualify = [];
-        item.querySelectorAll('.screening-option-row').forEach(function(row, i) {
-          var text = row.querySelector('input[type=text]').value.trim();
-          if (!text) return;
-          options.push(text);
-          if (row.querySelector('input[type=checkbox]').checked) qualify.push(options.length - 1);
-        });
-        if (options.length) questions.push({ q: q, options: options, qualify: qualify });
-      });
-      return questions;
-    }
 
     // Create test
     document.getElementById('createBtn').onclick = async function() {
