@@ -1925,7 +1925,7 @@ create policy "read videos"
     async function startWebsiteTest() {
       startBtn.disabled = true; startBtn.textContent = 'Requesting permissions…';
       try {
-        var screen = await navigator.mediaDevices.getDisplayMedia({ video: { displaySurface: 'browser' }, audio: true });
+        var screen = await navigator.mediaDevices.getDisplayMedia({ video: { displaySurface: 'browser' }, audio: true, preferCurrentTab: true });
         var mic; try { mic = await navigator.mediaDevices.getUserMedia({ audio: true }); } catch(e) { mic = null; }
 
         var combined = new MediaStream();
