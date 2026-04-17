@@ -1616,7 +1616,10 @@ create policy "read videos"
       var items = taskList.querySelectorAll('.task-item'), tasks = [];
       for (var i = 0; i < items.length; i++) {
         var t = items[i].querySelector('textarea').value.trim();
-        if (t) tasks.push({ type: items[i].querySelector('select').value, text: t });
+        if (t) {
+          var triggerVal = (items[i].querySelector('.task-trigger-input') || {}).value || '';
+          tasks.push({ type: items[i].querySelector('select').value, text: t, trigger: triggerVal.trim() || null });
+        }
       }
       if (!tasks.length) { alert('Додайте хоча б одне завдання'); return; }
 
