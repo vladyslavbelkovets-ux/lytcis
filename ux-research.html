@@ -40,6 +40,18 @@
   .field { margin-bottom: 20px; }
   .field label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: #333; }
   .field .hint { font-size: 12px; color: #888; margin-bottom: 6px; }
+
+  /* ===== FORM SECTIONS ===== */
+  .form-section {
+    background: #fff; border: 1px solid #ececec; border-radius: 14px;
+    padding: 20px 22px; margin-bottom: 14px;
+  }
+  .form-section-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+  .form-section-header.no-margin { margin-bottom: 0; }
+  .form-section-title { font-size: 14px; font-weight: 700; color: #1a1a1a; }
+  .form-section-subtitle { font-size: 12px; color: #999; margin-top: 2px; font-weight: 400; }
+  .form-section .field:last-child { margin-bottom: 0; }
+  .form-section .field { margin-bottom: 16px; }
   .field input, .field textarea, .field select {
     width: 100%; padding: 10px 12px; border: 1px solid #d0d0d0; border-radius: 8px;
     font-size: 14px; font-family: inherit; background: #fff; transition: border-color .15s;
@@ -580,38 +592,57 @@ create policy "read videos"
     <button class="btn-back" id="backFromCreate">&larr; Назад</button>
     <h2 style="font-size:18px;margin-bottom:24px;">Новий тест</h2>
 
-    <div class="type-toggle" id="testTypeToggle">
-      <button class="active" data-mode="website">🌐 Тест сайту</button>
-      <button data-mode="screenshots">🖼 Тест скріншотів</button>
+    <div class="form-section">
+      <div class="form-section-header no-margin">
+        <div>
+          <div class="form-section-title">Тип тесту</div>
+          <div class="form-section-subtitle">Сайт чи серія скріншотів</div>
+        </div>
+      </div>
+      <div class="type-toggle" id="testTypeToggle" style="margin-bottom:0;margin-top:14px;">
+        <button class="active" data-mode="website">🌐 Тест сайту</button>
+        <button data-mode="screenshots">🖼 Тест скріншотів</button>
+      </div>
     </div>
 
-    <div class="field">
-      <label>Назва тесту</label>
-      <input type="text" id="testName" placeholder="Напр. Тест головної сторінки v2">
+    <div class="form-section">
+      <div class="field" style="margin-bottom:0;">
+        <label>Назва тесту</label>
+        <input type="text" id="testName" placeholder="Напр. Тест головної сторінки v2">
+      </div>
     </div>
 
     <!-- Prescreening -->
-    <div class="field">
-      <div class="screening-toggle-row">
-        <button class="screening-toggle-btn" id="screeningToggleBtn" data-on="false">Додати прескрінінг</button>
+    <div class="form-section">
+      <div class="form-section-header" id="screeningHeader">
+        <div>
+          <div class="form-section-title">Прескрінінг</div>
+          <div class="form-section-subtitle">Відсіяти невідповідних респондентів</div>
+        </div>
+        <button class="screening-toggle-btn" id="screeningToggleBtn" data-on="false">Додати</button>
       </div>
-      <div id="screeningSection" style="display:none;margin-top:12px;">
-        <div class="hint" style="margin-bottom:10px;">Питання з вибором відповіді. Позначте зелені відповіді — ті, що пропускають далі. Решта — відсіює.</div>
+      <div id="screeningSection" style="display:none;">
         <div id="screeningList"></div>
-        <button class="btn-add-screening" id="addScreeningBtn">+ Додати питання скрінінгу</button>
+        <button class="btn-add-screening" id="addScreeningBtn">+ Додати питання</button>
       </div>
     </div>
 
     <!-- Website mode fields -->
     <div id="websiteFields">
-      <div class="field">
-        <label>URL для тестування</label>
-        <div class="hint">Figma-прототип, внутрішній сайт тощо.</div>
-        <input type="url" id="testUrl" placeholder="https://your-site.com/prototype">
+      <div class="form-section">
+        <div class="field" style="margin-bottom:0;">
+          <label>URL для тестування</label>
+          <div class="hint">Figma-прототип, внутрішній сайт тощо.</div>
+          <input type="url" id="testUrl" placeholder="https://your-site.com/prototype">
+        </div>
       </div>
-      <div class="field">
-        <label>Завдання</label>
-        <div class="hint">Task — взаємодія з інтерфейсом. Verbal — озвучити думки. Input — текстова відповідь. Scenario — інструкція.</div>
+      <div class="form-section">
+        <div class="form-section-header">
+          <div>
+            <div class="form-section-title">Завдання</div>
+            <div class="form-section-subtitle">Task · Verbal · Input · Scenario</div>
+          </div>
+        </div>
         <div class="task-list" id="taskList"></div>
         <button class="btn-add-task" id="addTaskBtn">+ Додати завдання</button>
       </div>
@@ -619,29 +650,35 @@ create policy "read videos"
 
     <!-- Screenshot mode fields -->
     <div id="screenshotFields" style="display:none;">
-      <div class="field">
-        <label>Екрани</label>
-        <div class="hint">Завантажте скріншоти і додайте питання до кожного.</div>
+      <div class="form-section">
+        <div class="form-section-header">
+          <div>
+            <div class="form-section-title">Екрани</div>
+            <div class="form-section-subtitle">Скріншоти і питання до кожного</div>
+          </div>
+        </div>
         <div id="screenList"></div>
         <button class="btn-add-screen" id="addScreenBtn">+ Додати екран</button>
       </div>
     </div>
-    <div class="field">
-      <label>Пристрій</label>
-      <div class="hint">На якому пристрої буде проходити тест.</div>
-      <div class="type-toggle" id="deviceToggle">
-        <button class="active" data-device="desktop">🖥 Desktop</button>
-        <button data-device="mobile">📱 Mobile</button>
-        <button data-device="both">🖥+📱 Both</button>
+
+    <div class="form-section">
+      <div class="field">
+        <label>Пристрій</label>
+        <div class="type-toggle" id="deviceToggle" style="margin-bottom:0;">
+          <button class="active" data-device="desktop">🖥 Desktop</button>
+          <button data-device="mobile">📱 Mobile</button>
+          <button data-device="both">🖥+📱 Both</button>
+        </div>
+      </div>
+      <div class="field" style="margin-bottom:0;">
+        <label>Ліміт респондентів</label>
+        <div class="hint">Залиште порожнім для необмеженого доступу.</div>
+        <input type="number" id="respondentLimit" min="1" placeholder="Напр. 10">
       </div>
     </div>
-    <div class="field">
-      <label>Ліміт респондентів</label>
-      <div class="hint">Залиште порожнім для необмеженого доступу.</div>
-      <input type="number" id="respondentLimit" min="1" placeholder="Напр. 10">
-    </div>
 
-    <button class="btn-primary" id="createBtn">Створити тест</button>
+    <button class="btn-primary" id="createBtn" style="margin-top:8px;">Створити тест</button>
     <div class="result-box" id="createResult">
       <label>Посилання для респондента</label>
       <div class="result-link-row">
