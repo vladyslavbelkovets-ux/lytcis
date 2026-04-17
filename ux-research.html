@@ -351,13 +351,30 @@
     justify-content: center; z-index: 20000;
   }
   .welcome-card, .closed-card {
-    background: #fff; border-radius: 16px; padding: 40px; max-width: 480px; width: 90%;
-    box-shadow: 0 4px 24px rgba(0,0,0,.08); text-align: center;
+    background: #fff; border-radius: 20px; padding: 48px 44px; max-width: 540px; width: 92%;
+    box-shadow: 0 4px 32px rgba(0,0,0,.09); text-align: center;
   }
-  .welcome-card h2, .closed-card h2 { font-size: 20px; margin-bottom: 8px; }
-  .welcome-card p, .closed-card p { color: #666; font-size: 14px; line-height: 1.6; margin-bottom: 24px; }
-  .welcome-card .permissions { text-align: left; font-size: 13px; color: #888; margin-bottom: 24px; padding: 12px 16px; background: #f9f9f9; border-radius: 8px; }
-  .welcome-card .permissions span { display: block; margin-bottom: 4px; }
+  .welcome-card h2, .closed-card h2 { font-size: 26px; font-weight: 800; margin-bottom: 6px; color: #0d0d0d; }
+  .welcome-card .welcome-time {
+    font-size: 15px; color: #888; margin-bottom: 32px; font-weight: 400;
+  }
+  .welcome-card p, .closed-card p { color: #666; font-size: 15px; line-height: 1.6; margin-bottom: 28px; }
+  .welcome-rules {
+    text-align: left; margin-bottom: 32px; display: flex; flex-direction: column; gap: 14px;
+  }
+  .welcome-rule {
+    display: flex; align-items: flex-start; gap: 14px;
+    background: #f8f8f8; border-radius: 12px; padding: 14px 16px;
+  }
+  .welcome-rule-icon {
+    font-size: 20px; line-height: 1; flex-shrink: 0; margin-top: 1px;
+  }
+  .welcome-rule-text { font-size: 14px; line-height: 1.5; color: #333; }
+  .welcome-rule-text strong { display: block; font-size: 14px; font-weight: 700; color: #0d0d0d; margin-bottom: 2px; }
+  .welcome-card .permissions { display: none; }
+  .welcome-record-note {
+    font-size: 12px; color: #bbb; margin-bottom: 24px; margin-top: -8px;
+  }
 
   .done-screen {
     position: fixed; inset: 0; background: #f5f5f5; display: none; align-items: center;
@@ -569,8 +586,11 @@
     .welcome-card, .closed-card, .done-card {
       padding: 28px 20px; width: 95%; border-radius: 14px;
     }
-    .welcome-card h2, .closed-card h2, .done-card h2 { font-size: 18px; }
-    .welcome-card p, .closed-card p, .done-card p { font-size: 13px; }
+    .welcome-card h2, .closed-card h2, .done-card h2 { font-size: 22px; }
+    .welcome-card p, .closed-card p, .done-card p { font-size: 14px; }
+    .welcome-card, .closed-card { padding: 36px 28px; }
+    .welcome-rule { padding: 12px 14px; }
+    .welcome-rule-text { font-size: 13px; }
     .btn-start { width: 100%; padding: 14px; font-size: 15px; border-radius: 10px; }
 
     /* Overlay → bottom sheet */
@@ -859,12 +879,31 @@ create policy "read videos"
   <div class="welcome-screen" id="welcomeScreen">
     <div class="welcome-card">
       <h2>Usability Test</h2>
-      <p id="welcomeTaskCount"></p>
-      <div class="permissions">
-        <span>After clicking "Start", your browser will ask permission for:</span>
-        <span>• Screen recording</span>
-        <span>• Microphone access</span>
+      <div class="welcome-time" id="welcomeTaskCount">About 10–15 minutes</div>
+      <div class="welcome-rules">
+        <div class="welcome-rule">
+          <div class="welcome-rule-icon">🗣️</div>
+          <div class="welcome-rule-text">
+            <strong>Think aloud</strong>
+            Say what you see, what you're doing, and how you feel as you go.
+          </div>
+        </div>
+        <div class="welcome-rule">
+          <div class="welcome-rule-icon">✅</div>
+          <div class="welcome-rule-text">
+            <strong>No right or wrong answers</strong>
+            We're testing the product — not you.
+          </div>
+        </div>
+        <div class="welcome-rule">
+          <div class="welcome-rule-icon">🎙️</div>
+          <div class="welcome-rule-text">
+            <strong>Screen & voice recording</strong>
+            Your browser will ask for permission when you click Start.
+          </div>
+        </div>
       </div>
+      <div class="permissions" style="display:none;"></div>
       <button class="btn-start" id="startBtn">Start</button>
     </div>
   </div>
@@ -2171,7 +2210,7 @@ create policy "read videos"
       welcomeScreen.style.display = 'flex';
       var perms = document.querySelector('.welcome-card .permissions');
       perms.innerHTML = '<span>You will view screenshots and answer questions about each one.</span>';
-      $('welcomeTaskCount').textContent = 'You will review ' + tasks.length + ' screen' + (tasks.length > 1 ? 's' : '') + '.';
+      $('welcomeTaskCount').textContent = 'About 10–15 minutes · ' + tasks.length + ' screen' + (tasks.length > 1 ? 's' : '');
       startBtn.textContent = 'Start';
       startBtn.onclick = function() { startScreenshotTest(); };
     }
@@ -2304,10 +2343,12 @@ create policy "read videos"
       welcomeScreen.style.display = 'flex';
       var perms = document.querySelector('.welcome-card .permissions');
       if (isMobile) {
-        $('welcomeTaskCount').textContent = 'You will complete ' + tasks.length + ' step' + (tasks.length > 1 ? 's' : '') + '. Please think aloud as you go.';
+        var mins = tasks.length <= 5 ? '5–10' : tasks.length <= 12 ? '10–15' : '15–20';
+        $('welcomeTaskCount').textContent = 'About ' + mins + ' minutes · ' + tasks.length + ' step' + (tasks.length > 1 ? 's' : '');
         perms.innerHTML = '<span>After clicking "Start", your browser will ask permission for:</span><span>• Microphone access (to record your voice)</span>';
       } else {
-        $('welcomeTaskCount').textContent = 'You will complete ' + tasks.length + ' step' + (tasks.length > 1 ? 's' : '') + '. Please think aloud as you go.';
+        var mins = tasks.length <= 5 ? '5–10' : tasks.length <= 12 ? '10–15' : '15–20';
+        $('welcomeTaskCount').textContent = 'About ' + mins + ' minutes · ' + tasks.length + ' step' + (tasks.length > 1 ? 's' : '');
         perms.innerHTML = '<span>After clicking "Start", your browser will ask permission for:</span><span>• Screen recording</span><span>• Microphone access</span>';
       }
       startBtn.onclick = isMobile ? startMobileWebsiteTest : startWebsiteTest;
