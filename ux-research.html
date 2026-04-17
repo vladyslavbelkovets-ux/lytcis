@@ -416,6 +416,8 @@
   .upload-status { font-size: 13px; color: #888; margin-top: 16px; min-height: 20px; }
   .upload-status.success { color: #4caf50; }
   .upload-status.error { color: #e53935; }
+  .welcome-reward-note { font-size: 12px; color: #888; margin-top: 16px; line-height: 1.5; text-align: center; padding: 0 4px; }
+  .done-reward-note { font-size: 13px; color: #888; margin-top: 20px; line-height: 1.6; border-top: 1px solid #eee; padding-top: 16px; }
 
   /* ===== TYPE TOGGLE ===== */
   .type-toggle { display: flex; gap: 0; margin-bottom: 24px; border: 1px solid #d0d0d0; border-radius: 8px; overflow: hidden; }
@@ -937,6 +939,7 @@ create policy "read videos"
       </div>
       <div class="permissions" style="display:none;"></div>
       <button class="btn-start" id="startBtn">Start</button>
+      <p class="welcome-reward-note">⚠️ Reward will only be granted for complete participation and honest answers throughout the entire session.</p>
     </div>
   </div>
   <div class="screening-screen" id="screeningScreen">
@@ -973,6 +976,7 @@ create policy "read videos"
       <h2>Thank you!</h2>
       <p>The test is complete. Your recording has been saved.</p>
       <div class="upload-status" id="uploadStatus"></div>
+      <p class="done-reward-note">🎁 If you completed the session honestly and in full, your reward will be sent within 2 weeks.</p>
     </div>
   </div>
   <div class="overlay" id="overlay" style="display:none;">
