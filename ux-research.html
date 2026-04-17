@@ -134,38 +134,50 @@
   /* ===== TASK BUILDER ===== */
   .task-list { margin-bottom: 16px; }
   .task-item {
-    display: flex; gap: 8px; align-items: flex-start; margin-bottom: 8px;
-    background: #fff; border: 1px solid #d0d0d0; border-radius: 8px; padding: 8px 10px;
-    transition: opacity .15s, box-shadow .15s;
+    margin-bottom: 8px; background: #fff; border: 1px solid #d0d0d0; border-radius: 10px;
+    padding: 12px 14px; transition: opacity .15s, box-shadow .15s;
   }
   .task-item.dragging { opacity: .4; }
   .task-item.drag-over { box-shadow: 0 -2px 0 0 #4a90d9; }
+  .task-top-row {
+    display: flex; align-items: center; gap: 8px; margin-bottom: 8px;
+  }
+  .task-body-row {
+    display: flex; align-items: flex-start; gap: 6px; padding-left: 22px;
+  }
   .task-item .drag-handle {
-    cursor: grab; color: #ccc; flex-shrink: 0; padding: 4px 2px; display: flex; align-items: center;
-    font-size: 16px; line-height: 1; user-select: none;
+    cursor: grab; color: #ccc; flex-shrink: 0;
+    font-size: 16px; line-height: 1; user-select: none; width: 16px; text-align: center;
   }
   .task-item .drag-handle:active { cursor: grabbing; }
   .task-item .drag-handle:hover { color: #999; }
-  .task-item select {
-    padding: 6px 8px; border: 1px solid #d0d0d0; border-radius: 6px; font-size: 13px;
-    background: #f9f9f9; font-family: inherit; cursor: pointer; flex-shrink: 0; width: auto;
-    align-self: center;
+  .task-type-chips { display: flex; gap: 4px; flex: 1; flex-wrap: wrap; }
+  .type-chip {
+    padding: 3px 10px; border-radius: 100px; font-size: 12px; font-weight: 600;
+    border: 1.5px solid #e0e0e0; background: transparent; color: #aaa; cursor: pointer;
+    font-family: inherit; transition: all .1s; line-height: 1.4;
   }
+  .type-chip:hover { border-color: #bbb; color: #555; }
+  .type-chip.active[data-type="task"]       { background: #2979ff; border-color: #2979ff; color: #fff; }
+  .type-chip.active[data-type="verbal"]     { background: #ab47bc; border-color: #ab47bc; color: #fff; }
+  .type-chip.active[data-type="input"]      { background: #ef6c00; border-color: #ef6c00; color: #fff; }
+  .type-chip.active[data-type="fullscreen"] { background: #6c3fc5; border-color: #6c3fc5; color: #fff; }
   .task-item textarea {
     flex: 1; border: none; outline: none; font-size: 14px; font-family: inherit;
-    background: transparent; padding: 4px 0; resize: vertical; min-height: 28px; max-height: 200px;
-    line-height: 1.4; overflow: hidden;
+    background: transparent; padding: 2px 0; resize: none; min-height: 24px; max-height: 200px;
+    line-height: 1.5; overflow: hidden; color: #1a1a1a;
   }
+  .task-item textarea::placeholder { color: #bbb; }
   .task-item .btn-remove {
-    width: 28px; height: 28px; border: none; background: none; color: #bbb; font-size: 18px;
+    width: 26px; height: 26px; border: none; background: none; color: #ccc; font-size: 17px;
     cursor: pointer; border-radius: 4px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
-    align-self: center;
+    transition: all .1s;
   }
   .task-item .btn-remove:hover { background: #fee; color: #e53935; }
   .task-item .btn-attach {
-    width: 28px; height: 28px; border: none; background: none; color: #bbb; font-size: 15px;
-    cursor: pointer; border-radius: 4px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
-    align-self: center; transition: color .15s;
+    display: inline-flex; align-items: center; gap: 4px;
+    border: none; background: none; color: #bbb; font-size: 12px; font-weight: 600; font-family: inherit;
+    cursor: pointer; padding: 2px 0; transition: color .15s; white-space: nowrap;
   }
   .task-item .btn-attach:hover { color: #555; }
   .task-item .btn-attach.has-file { color: #4a90d9; }
@@ -1326,7 +1338,7 @@ create policy "read videos"
     // Reset screening toggle
     var stBtn = document.getElementById('screeningToggleBtn');
     stBtn.dataset.on = 'false';
-    stBtn.textContent = 'Додати прескрінінг';
+    stBtn.textContent = 'Додати';
     document.getElementById('screeningSection').style.display = 'none';
     document.getElementById('screeningList').innerHTML = '';
 
@@ -1370,14 +1382,34 @@ create policy "read videos"
       var item = document.createElement('div');
       item.className = 'task-item';
       item.draggable = true;
+      var activeType = type || 'task';
       item.innerHTML =
-        '<span class="drag-handle" title="Перетягнути">⠿</span>' +
-        '<select><option value="task">Task</option><option value="verbal">Verbal</option><option value="input">Input</option><option value="fullscreen">Fullscreen</option></select>' +
-        '<textarea rows="1" placeholder="Опишіть завдання…"></textarea>' +
-        '<button class="btn-attach" title="Прикріпити файл">📎</button>' +
-        '<input type="file" accept="image/*,.pdf" style="display:none">' +
-        '<button class="btn-remove" title="Видалити">&times;</button>';
-      if (type) item.querySelector('select').value = type;
+        '<div class="task-top-row">' +
+          '<span class="drag-handle" title="Перетягнути">⠿</span>' +
+          '<div class="task-type-chips">' +
+            '<button class="type-chip' + (activeType==='task'?' active':'') + '" data-type="task">Task</button>' +
+            '<button class="type-chip' + (activeType==='verbal'?' active':'') + '" data-type="verbal">Verbal</button>' +
+            '<button class="type-chip' + (activeType==='input'?' active':'') + '" data-type="input">Input</button>' +
+            '<button class="type-chip' + (activeType==='fullscreen'?' active':'') + '" data-type="fullscreen">Fullscreen</button>' +
+          '</div>' +
+          '<select style="display:none"><option value="task">Task</option><option value="verbal">Verbal</option><option value="input">Input</option><option value="fullscreen">Fullscreen</option></select>' +
+          '<button class="btn-remove" title="Видалити">&times;</button>' +
+        '</div>' +
+        '<div class="task-body-row">' +
+          '<textarea rows="1" placeholder="Опишіть завдання…"></textarea>' +
+          '<button class="btn-attach" title="Прикріпити файл"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg> Attach</button>' +
+          '<input type="file" accept="image/*,.pdf" style="display:none">' +
+        '</div>';
+      var sel = item.querySelector('select');
+      sel.value = activeType;
+      // Type chip selection
+      item.querySelectorAll('.type-chip').forEach(function(chip) {
+        chip.addEventListener('click', function() {
+          item.querySelectorAll('.type-chip').forEach(function(c) { c.classList.remove('active'); });
+          chip.classList.add('active');
+          sel.value = chip.dataset.type;
+        });
+      });
       var ta = item.querySelector('textarea');
       if (text) { ta.value = text; setTimeout(function() { autoResize(ta); }, 0); }
       ta.addEventListener('input', function() { autoResize(this); });
@@ -1406,9 +1438,10 @@ create policy "read videos"
           preview.remove();
           fileInput.value = '';
         });
-        // Insert preview below the task row (wrap in flex column)
-        item.style.flexWrap = 'wrap';
-        item.appendChild(preview);
+        // Insert preview inside body row
+        var bodyRow = item.querySelector('.task-body-row');
+        bodyRow.style.flexWrap = 'wrap';
+        bodyRow.appendChild(preview);
         preview.style.width = '100%';
       });
 
@@ -1496,14 +1529,14 @@ create policy "read videos"
       var isOn = screeningToggleBtn.dataset.on === 'true';
       if (!isOn) {
         screeningToggleBtn.dataset.on = 'true';
-        screeningToggleBtn.textContent = '✓ Прескрінінг активний';
+        screeningToggleBtn.textContent = '✓ Додано';
         screeningSection.style.display = 'block';
         if (!document.querySelectorAll('#screeningList .screening-item').length) {
           addScreeningQuestion();
         }
       } else {
         screeningToggleBtn.dataset.on = 'false';
-        screeningToggleBtn.textContent = 'Додати прескрінінг';
+        screeningToggleBtn.textContent = 'Додати';
         screeningSection.style.display = 'none';
       }
     };
