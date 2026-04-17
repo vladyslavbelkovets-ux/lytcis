@@ -145,22 +145,7 @@
   .task-body-row {
     display: flex; align-items: flex-start; gap: 6px; padding-left: 22px;
   }
-  .task-trigger-row {
-    display: flex; align-items: center; gap: 6px; padding-left: 22px; margin-top: 6px;
-  }
-  .task-trigger-row input {
-    flex: 1; border: 1px solid #e0e0e0; border-radius: 6px; padding: 5px 10px;
-    font-size: 12px; font-family: inherit; color: #333; outline: none; background: #fafafa;
-  }
-  .task-trigger-row input:focus { border-color: #2979ff; background: #fff; }
-  .task-trigger-row input::placeholder { color: #bbb; }
-  .btn-trigger-toggle {
-    font-size: 11px; color: #aaa; background: none; border: none; cursor: pointer;
-    padding: 2px 4px; white-space: nowrap; font-family: inherit;
-  }
-  .btn-trigger-toggle:hover { color: #555; }
-  .btn-trigger-toggle.active { color: #2979ff; }
-  .task-item .drag-handle {
+.task-item .drag-handle {
     cursor: grab; color: #ccc; flex-shrink: 0;
     font-size: 16px; line-height: 1; user-select: none; width: 16px; text-align: center;
   }
@@ -1600,7 +1585,7 @@ create policy "read videos"
     taskList.innerHTML = '';
     if (actualTasks.length) {
       actualTasks.forEach(function(t) {
-        _addTaskRow(t.type === 'scenario' ? 'fullscreen' : (t.type || 'task'), t.text, t.trigger || null);
+        _addTaskRow(t.type === 'scenario' ? 'fullscreen' : (t.type || 'task'), t.text);
       });
     } else {
       _addTaskRow('task', '');
@@ -1644,10 +1629,7 @@ create policy "read videos"
       var items = taskList.querySelectorAll('.task-item'), tasks = [];
       for (var i = 0; i < items.length; i++) {
         var t = items[i].querySelector('textarea').value.trim();
-        if (t) {
-          var triggerVal = (items[i].querySelector('.task-trigger-input') || {}).value || '';
-          tasks.push({ type: items[i].querySelector('select').value, text: t, trigger: triggerVal.trim() || null });
-        }
+        if (t) tasks.push({ type: items[i].querySelector('select').value, text: t });
       }
       if (!tasks.length) { alert('Додайте хоча б одне завдання'); return; }
 
@@ -1765,7 +1747,7 @@ create policy "read videos"
       ta.style.height = ta.scrollHeight + 'px';
     }
 
-    function addTaskRow(type, text, trigger) {
+    function addTaskRow(type, text) {
       var item = document.createElement('div');
       item.className = 'task-item';
       item.draggable = true;
@@ -1786,14 +1768,6 @@ create policy "read videos"
           '<textarea rows="1" placeholder="Опишіть завдання…"></textarea>' +
           '<button class="btn-attach" title="Прикріпити файл"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg> Attach</button>' +
           '<input type="file" accept="image/*,.pdf" style="display:none">' +
-        '</div>' +
-        '<div class="task-trigger-row" style="display:none;">' +
-          '<span style="font-size:11px;color:#aaa;white-space:nowrap;">⚡ Trigger URL</span>' +
-          '<input type="text" class="task-trigger-input" placeholder="e.g. /checkout/success">' +
-          '<button class="btn-trigger-toggle active" title="Вимкнути тригер">×</button>' +
-        '</div>' +
-        '<div style="padding-left:22px;margin-top:4px;">' +
-          '<button class="btn-trigger-toggle" style="padding:0;">+ URL trigger</button>' +
         '</div>';
       var sel = item.querySelector('select');
       sel.value = activeType;
@@ -1810,26 +1784,6 @@ create policy "read videos"
       ta.addEventListener('input', function() { autoResize(this); });
       item.querySelector('.btn-remove').addEventListener('click', function() { item.remove(); });
 
-      // Trigger URL toggle
-      var triggerRow = item.querySelector('.task-trigger-row');
-      var triggerInput = item.querySelector('.task-trigger-input');
-      var addTriggerBtn = item.querySelectorAll('.btn-trigger-toggle')[1]; // the "+ URL trigger" btn
-      var removeTriggerBtn = item.querySelectorAll('.btn-trigger-toggle')[0]; // the "×" btn inside row
-      addTriggerBtn.addEventListener('click', function() {
-        triggerRow.style.display = 'flex';
-        addTriggerBtn.parentElement.style.display = 'none';
-        triggerInput.focus();
-      });
-      removeTriggerBtn.addEventListener('click', function() {
-        triggerRow.style.display = 'none';
-        triggerInput.value = '';
-        addTriggerBtn.parentElement.style.display = 'block';
-      });
-      if (trigger) {
-        triggerInput.value = trigger;
-        triggerRow.style.display = 'flex';
-        addTriggerBtn.parentElement.style.display = 'none';
-      }
 
       // Attach file
       var attachBtn = item.querySelector('.btn-attach');
@@ -2106,10 +2060,7 @@ create policy "read videos"
         var items = taskList.querySelectorAll('.task-item'), tasks = [];
         for (var i = 0; i < items.length; i++) {
           var t = items[i].querySelector('textarea').value.trim();
-          if (t) {
-            var triggerVal = (items[i].querySelector('.task-trigger-input') || {}).value || '';
-            tasks.push({ type: items[i].querySelector('select').value, text: t, trigger: triggerVal.trim() || null, _itemEl: items[i] });
-          }
+          if (t) tasks.push({ type: items[i].querySelector('select').value, text: t, _itemEl: items[i] });
         }
         if (!tasks.length) { alert('Додайте хоча б одне завдання'); return; }
 
@@ -2671,45 +2622,13 @@ create policy "read videos"
       overlayInput.style.display = task.type === 'input' ? 'block' : 'none';
       if (task.type === 'input') { overlayInput.value = inputAnswers[idx] ? inputAnswers[idx].a : ''; overlayInput.focus(); }
 
-      // Buttons: always show as fallback; add hint if trigger set
-      var existingTriggerHint = overlay.querySelector('.trigger-hint');
-      if (existingTriggerHint) existingTriggerHint.remove();
       nextBtn.style.display = (idx < tasks.length - 1) ? 'inline-block' : 'none';
       finishBtn.style.display = isLast ? 'inline-block' : 'none';
-      if (task.trigger) {
-        var hint = document.createElement('p');
-        hint.className = 'trigger-hint';
-        hint.textContent = '⚡ Will advance automatically';
-        hint.style.cssText = 'font-size:11px;color:rgba(255,255,255,.35);margin:8px 0 0;text-align:center;';
-        overlay.querySelector('.overlay-action').after(hint);
-      }
     }
 
     nextBtn.addEventListener('click', function() { if (currentTask < tasks.length - 1) showTask(currentTask + 1); });
     finishBtn.addEventListener('click', finishRecording);
 
-    // ===== URL TRIGGER =====
-    // When iframe navigates to a URL containing the task's trigger string → auto-advance
-    // ===== URL TRIGGER =====
-    // Works only for same-origin iframes. Cross-origin frames block location.href
-    // access — in that case the DONE button serves as manual fallback.
-    testFrame.addEventListener('load', function() {
-      var task = tasks[currentTask];
-      if (!task || !task.trigger) return;
-      var frameUrl = '';
-      try {
-        frameUrl = testFrame.contentWindow.location.href;
-      } catch(e) {
-        // Cross-origin: cannot read URL — user will use DONE button
-        return;
-      }
-      if (frameUrl && frameUrl.includes(task.trigger)) {
-        var isLast = currentTask === tasks.length - 1;
-        setTimeout(function() {
-          if (isLast) { finishRecording(); } else { showTask(currentTask + 1); }
-        }, 600);
-      }
-    });
 
     function finishRecording() {
       saveInput();
