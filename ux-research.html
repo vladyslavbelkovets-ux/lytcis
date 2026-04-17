@@ -1585,7 +1585,27 @@ create policy "read videos"
     taskList.innerHTML = '';
     if (actualTasks.length) {
       actualTasks.forEach(function(t) {
-        _addTaskRow(t.type === 'scenario' ? 'fullscreen' : (t.type || 'task'), t.text);
+        var row = _addTaskRow(t.type === 'scenario' ? 'fullscreen' : (t.type || 'task'), t.text);
+        // Show existing attachment preview
+        if (t.attachment && row) {
+          var attachBtn = row.querySelector('.btn-attach');
+          var bodyRow = row.querySelector('.task-body-row');
+          attachBtn.classList.add('has-file');
+          var preview = document.createElement('div');
+          preview.className = 'task-attach-preview';
+          var isImage = /\.(png|jpg|jpeg|gif|webp|svg)$/i.test(t.attachment);
+          var attachUrl = SB.url + '/storage/v1/object/public/videos/' + t.attachment;
+          preview.innerHTML = (isImage ? '<img src="' + attachUrl + '">' : '📄') + '<span class="attach-name">' + t.attachment.split('/').pop() + '</span><button class="btn-remove-attach">&times;</button>';
+          preview.querySelector('.btn-remove-attach').addEventListener('click', function() {
+            attachBtn.classList.remove('has-file');
+            row._existingAttachment = null;
+            preview.remove();
+          });
+          bodyRow.style.flexWrap = 'wrap';
+          bodyRow.appendChild(preview);
+          preview.style.width = '100%';
+          row._existingAttachment = t.attachment;
+        }
       });
     } else {
       _addTaskRow('task', '');
@@ -1629,15 +1649,34 @@ create policy "read videos"
       var items = taskList.querySelectorAll('.task-item'), tasks = [];
       for (var i = 0; i < items.length; i++) {
         var t = items[i].querySelector('textarea').value.trim();
-        if (t) tasks.push({ type: items[i].querySelector('select').value, text: t });
+        if (t) tasks.push({ type: items[i].querySelector('select').value, text: t, _itemEl: items[i] });
       }
       if (!tasks.length) { alert('Додайте хоча б одне завдання'); return; }
 
       var screening = collectScreening();
-      var tasksData = screening.length ? { screening: screening, tasks: tasks } : tasks;
 
       btn.disabled = true; btn.textContent = 'Збереження…';
       try {
+        // Upload new attachments; preserve existing ones
+        var existingTasks = (currentEditTest.tasks && currentEditTest.tasks.tasks) ? currentEditTest.tasks.tasks : (Array.isArray(currentEditTest.tasks) ? currentEditTest.tasks : []);
+        for (var i = 0; i < tasks.length; i++) {
+          var el = tasks[i]._itemEl;
+          delete tasks[i]._itemEl;
+          if (el && el._attachFile) {
+            btn.textContent = 'Завантаження файлу ' + (i + 1) + '…';
+            var ext = el._attachFile.name.split('.').pop() || 'bin';
+            var attachPath = 'attachments/' + currentEditTest.id + '/' + i + '.' + ext;
+            await SB.upload(attachPath, el._attachFile);
+            tasks[i].attachment = attachPath;
+          } else if (el && el._existingAttachment) {
+            // Keep existing attachment shown in preview
+            tasks[i].attachment = el._existingAttachment;
+          }
+        }
+
+        var tasksData = screening.length ? { screening: screening, tasks: tasks } : tasks;
+        btn.textContent = 'Збереження…';
+
         var hdr = SB.headers({ 'Prefer': 'return=representation', 'Content-Type': 'application/json' });
         var patchBody = { tasks: tasksData, respondent_limit: limitVal };
         if (name) patchBody.name = name;
@@ -1847,6 +1886,7 @@ create policy "read videos"
 
       taskList.appendChild(item);
       ta.focus();
+      return item;
     }
 
     addTaskRow('task', '');
