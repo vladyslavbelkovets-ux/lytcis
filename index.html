@@ -1623,6 +1623,7 @@ create policy "read videos"
         if (!updated || !updated.length) throw new Error('Не вдалось оновити — можливо немає UPDATE policy в Supabase.');
 
         // Reset edit mode and go back to detail
+        btn.disabled = false; btn.textContent = 'Зберегти зміни';
         currentEditTest = null;
         document.querySelector('#pageCreate h2').textContent = 'Новий тест';
         showPage('pageDashboard');
