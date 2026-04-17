@@ -929,6 +929,13 @@ create policy "read videos"
       <p>We've reached the maximum number of participants. Thank you for your interest!</p>
     </div>
   </div>
+  <div class="closed-screen" id="wrongDeviceScreen" style="display:none;">
+    <div class="closed-card">
+      <div id="wrongDeviceIcon" style="font-size:48px;margin-bottom:16px;"></div>
+      <h2 id="wrongDeviceTitle"></h2>
+      <p id="wrongDeviceMsg"></p>
+    </div>
+  </div>
   <div class="done-screen" id="doneScreen">
     <div class="done-card">
       <h2>Thank you!</h2>
@@ -1366,13 +1373,14 @@ create policy "read videos"
 
         // Build CSV
         var csvRows = [];
-        var header = ['Дата', 'Відео/Аудіо'];
+        var header = ['Дата', 'Пристрій', 'Відео/Аудіо'];
         keys.forEach(function(k) { header.push(allKeys[k]); });
         csvRows.push(header.map(csvEsc).join(','));
 
         responses.forEach(function(r) {
           var row = [
             new Date(r.created_at).toLocaleString('uk-UA'),
+            r.device || '',
             r.video_path ? SB.videoUrl(r.video_path) : ''
           ];
           keys.forEach(function(k) {
@@ -1429,7 +1437,8 @@ create policy "read videos"
         var card = document.createElement('div');
         card.className = 'response-card';
         var date = new Date(resp.created_at).toLocaleString('uk-UA', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
-        var html = '<div class="rc-date">' + date + '</div>';
+        var deviceBadge = resp.device ? '<span style="display:inline-block;margin-left:8px;font-size:11px;font-weight:600;padding:2px 7px;border-radius:4px;background:' + (resp.device === 'mobile' ? '#e3f2fd;color:#1565c0' : '#f3e5f5;color:#6a1b9a') + '">' + (resp.device === 'mobile' ? '📱 Mobile' : '🖥️ Desktop') + '</span>' : '';
+        var html = '<div class="rc-date">' + date + deviceBadge + '</div>';
         if (resp.video_path) {
           var vUrl = SB.videoUrl(resp.video_path);
           var ext = resp.video_path.split('.').pop() || 'webm';
@@ -2103,6 +2112,22 @@ create policy "read videos"
       if (!rows.length) { closedScreen.style.display = 'flex'; return; }
       testData = rows[0];
 
+      // Device check
+      var requiredDevice = cfg.d || 'both'; // 'desktop' | 'mobile' | 'both'
+      var wrongDeviceScreen = $('wrongDeviceScreen');
+      if (requiredDevice !== 'both') {
+        var needsMobile = requiredDevice === 'mobile';
+        if (needsMobile !== isMobile) {
+          $('wrongDeviceIcon').textContent = needsMobile ? '📱' : '🖥️';
+          $('wrongDeviceTitle').textContent = needsMobile ? 'Open on your phone' : 'Open on your computer';
+          $('wrongDeviceMsg').textContent = needsMobile
+            ? 'This test is designed for mobile devices. Please open this link on your phone to continue.'
+            : 'This test is designed for desktop. Please open this link on your computer to continue.';
+          wrongDeviceScreen.style.display = 'flex';
+          return;
+        }
+      }
+
       // Parse tasks — may be wrapped with screening
       var raw = testData.tasks;
       if (Array.isArray(raw)) {
@@ -2328,7 +2353,8 @@ create policy "read videos"
         var respId = crypto.randomUUID();
         await sb.post('/rest/v1/responses', {
           id: respId, test_id: cfg.t, video_path: null,
-          answers: Object.keys(screenshotAnswers).length ? screenshotAnswers : null
+          answers: Object.keys(screenshotAnswers).length ? screenshotAnswers : null,
+          device: isMobile ? 'mobile' : 'desktop'
         });
         uploadStatus.textContent = 'Done! Thank you for participating.';
         uploadStatus.className = 'upload-status success';
@@ -2526,7 +2552,8 @@ create policy "read videos"
         uploadStatus.textContent = 'Saving response…';
         await sb.post('/rest/v1/responses', {
           id: respId, test_id: cfg.t, video_path: videoPath,
-          answers: Object.keys(inputAnswers).length ? inputAnswers : null
+          answers: Object.keys(inputAnswers).length ? inputAnswers : null,
+          device: isMobile ? 'mobile' : 'desktop'
         });
 
         uploadStatus.textContent = 'Done! Thank you for participating.';
