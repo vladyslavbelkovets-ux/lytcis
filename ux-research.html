@@ -115,7 +115,8 @@
   .dt-type.t-task { background: #2979ff; }
   .dt-type.t-verbal { background: #ab47bc; }
   .dt-type.t-input { background: #ef6c00; }
-  .dt-type.t-scenario { background: #00897b; }
+  .dt-type.t-scenario { background: #6c3fc5; }
+  .dt-type.t-fullscreen { background: #6c3fc5; }
 
   .detail-actions { display: flex; gap: 8px; margin-bottom: 24px; flex-wrap: wrap; }
 
@@ -217,9 +218,47 @@
   .task-badge.type-task { background: #2979ff; }
   .task-badge.type-verbal { background: #ab47bc; }
   .task-badge.type-input { background: #ef6c00; }
-  .task-badge.type-scenario { background: #00897b; }
+  .task-badge.type-scenario { background: #6c3fc5; }
+  .task-badge.type-fullscreen { background: #6c3fc5; }
   .task-badge svg { width: 13px; height: 13px; }
   .task-text { font-size: 16px; line-height: 1.45; font-weight: 500; margin-bottom: 14px; }
+
+  /* ===== FULLSCREEN MODAL ===== */
+  .fs-modal {
+    position: fixed; inset: 0; z-index: 10000;
+    background: #0d0d0d;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .fs-modal-card {
+    max-width: 580px; width: 90%; text-align: center;
+  }
+  .fs-modal-counter {
+    font-size: 11px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase;
+    color: rgba(255,255,255,.35); margin-bottom: 32px;
+  }
+  .fs-modal-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: #6c3fc5; color: #fff;
+    font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px;
+    padding: 4px 12px; border-radius: 100px; margin-bottom: 24px;
+  }
+  .fs-modal-badge svg { width: 13px; height: 13px; }
+  .fs-modal-text {
+    font-size: 24px; font-weight: 500; line-height: 1.5;
+    color: #fff; margin-bottom: 48px;
+  }
+  .fs-modal-btn {
+    background: #fff; color: #0d0d0d; border: none; border-radius: 10px;
+    padding: 14px 40px; font-size: 15px; font-weight: 700; cursor: pointer;
+    transition: background .15s, transform .1s;
+  }
+  .fs-modal-btn:hover { background: #ebebeb; transform: scale(1.02); }
+  .fs-modal-rec {
+    position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+    display: flex; align-items: center; gap: 8px;
+    background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.12);
+    border-radius: 100px; padding: 6px 14px; font-size: 12px; color: rgba(255,255,255,.5);
+  }
   .overlay-input {
     width: 100%; padding: 10px 12px; border: 1px solid rgba(255,255,255,.2); border-radius: 8px;
     background: rgba(255,255,255,.1); color: #fff; font-size: 14px; font-family: inherit;
@@ -640,7 +679,7 @@ create policy "read videos"
         <div class="form-section-header">
           <div>
             <div class="form-section-title">Завдання</div>
-            <div class="form-section-subtitle">Task · Verbal · Input · Scenario</div>
+            <div class="form-section-subtitle">Task · Verbal · Input · Fullscreen</div>
           </div>
         </div>
         <div class="task-list" id="taskList"></div>
@@ -770,6 +809,17 @@ create policy "read videos"
     </div>
   </div>
   <iframe class="test-frame" id="testFrame" allow="camera; microphone; fullscreen; autoplay; clipboard-write"></iframe>
+
+  <!-- Fullscreen task modal -->
+  <div class="fs-modal" id="fsModal" style="display:none;">
+    <div class="fs-modal-rec" id="fsRec"></div>
+    <div class="fs-modal-card">
+      <div class="fs-modal-counter" id="fsCounter"></div>
+      <div class="fs-modal-badge" id="fsBadge"></div>
+      <div class="fs-modal-text" id="fsText"></div>
+      <button class="fs-modal-btn" id="fsBtn">Got it</button>
+    </div>
+  </div>
 
   <!-- Screenshot respondent view -->
   <div class="screenshot-view" id="screenshotView">
@@ -1115,7 +1165,9 @@ create policy "read videos"
     } else {
       tasksHtml += '<h3 style="font-size:13px;font-weight:600;margin-bottom:10px;color:#555;">Завдання (' + actualTasks.length + ')</h3>';
       actualTasks.forEach(function(t) {
-        tasksHtml += '<div class="detail-task-item"><span class="dt-type t-' + t.type + '">' + t.type + '</span>' + esc(t.text) + '</div>';
+        var typeLabel = (t.type === 'scenario') ? 'fullscreen' : (t.type || 'task');
+        var typeClass = (t.type === 'scenario') ? 'fullscreen' : typeLabel;
+        tasksHtml += '<div class="detail-task-item"><span class="dt-type t-' + typeClass + '">' + typeLabel + '</span>' + esc(t.text) + '</div>';
       });
     }
     document.getElementById('detailTasks').innerHTML = tasksHtml;
@@ -1316,7 +1368,7 @@ create policy "read videos"
       item.draggable = true;
       item.innerHTML =
         '<span class="drag-handle" title="Перетягнути">⠿</span>' +
-        '<select><option value="task">Task</option><option value="verbal">Verbal</option><option value="input">Input</option><option value="scenario">Scenario</option></select>' +
+        '<select><option value="task">Task</option><option value="verbal">Verbal</option><option value="input">Input</option><option value="fullscreen">Fullscreen</option></select>' +
         '<textarea rows="1" placeholder="Опишіть завдання…"></textarea>' +
         '<button class="btn-attach" title="Прикріпити файл">📎</button>' +
         '<input type="file" accept="image/*,.pdf" style="display:none">' +
@@ -1675,6 +1727,7 @@ create policy "read videos"
     var nextBtn = $('nextBtn'), finishBtn = $('finishBtn'), taskNumber = $('taskNumber');
     var taskText = $('taskText'), taskBadge = $('taskBadge'), overlayInput = $('overlayInput');
     var timerEl = $('timer'), recDot = $('recDot'), uploadStatus = $('uploadStatus');
+    var fsModal = $('fsModal'), fsCounter = $('fsCounter'), fsText = $('fsText'), fsBtn = $('fsBtn'), fsBadge = $('fsBadge'), fsRec = $('fsRec');
 
     var tasks = [], screening = [], currentTask = 0, recorder = null, chunks = [], timerInterval = null, startTime = 0;
     var inputAnswers = {}, testData = null;
@@ -2010,6 +2063,33 @@ create policy "read videos"
     function showTask(idx) {
       saveInput(); currentTask = idx;
       var task = tasks[idx];
+      var isFullscreen = task.type === 'fullscreen' || task.type === 'scenario';
+      var isLast = (idx === tasks.length - 1);
+
+      // --- Fullscreen modal mode ---
+      if (isFullscreen) {
+        overlay.style.display = 'none';
+        fsCounter.textContent = (idx + 1) + ' / ' + tasks.length;
+        fsText.textContent = task.text;
+        fsBadge.innerHTML = ICON_SCENARIO + ' Fullscreen';
+        fsRec.innerHTML = '<div class="rec-dot" style="width:7px;height:7px;background:#f44;border-radius:50%;animation:recBlink 1s infinite;display:inline-block;margin-right:6px;"></div> Recording';
+        fsBtn.textContent = isLast ? 'Finish test' : 'Got it →';
+        fsModal.style.display = 'flex';
+        fsBtn.onclick = function() {
+          fsModal.style.display = 'none';
+          if (isLast) {
+            finishRecording();
+          } else {
+            overlay.style.display = 'block';
+            showTask(idx + 1);
+          }
+        };
+        return;
+      }
+
+      // --- Normal overlay mode ---
+      fsModal.style.display = 'none';
+      overlay.style.display = 'block';
       taskNumber.textContent = (idx + 1) + ' / ' + tasks.length;
       taskText.textContent = task.text;
 
@@ -2035,7 +2115,8 @@ create policy "read videos"
         task: { cls: 'type-task', icon: ICON_TASK, label: 'Task' },
         verbal: { cls: 'type-verbal', icon: ICON_VERBAL, label: 'Verbal' },
         input: { cls: 'type-input', icon: ICON_INPUT, label: 'Input' },
-        scenario: { cls: 'type-scenario', icon: ICON_SCENARIO, label: 'Scenario' }
+        fullscreen: { cls: 'type-fullscreen', icon: ICON_SCENARIO, label: 'Fullscreen' },
+        scenario: { cls: 'type-fullscreen', icon: ICON_SCENARIO, label: 'Fullscreen' }
       };
       var b = badges[task.type] || badges.task;
       taskBadge.className = 'task-badge ' + b.cls;
@@ -2043,7 +2124,7 @@ create policy "read videos"
       overlayInput.style.display = task.type === 'input' ? 'block' : 'none';
       if (task.type === 'input') { overlayInput.value = inputAnswers[idx] ? inputAnswers[idx].a : ''; overlayInput.focus(); }
       nextBtn.style.display = (idx < tasks.length - 1) ? 'inline-block' : 'none';
-      finishBtn.style.display = (idx === tasks.length - 1) ? 'inline-block' : 'none';
+      finishBtn.style.display = isLast ? 'inline-block' : 'none';
     }
 
     nextBtn.addEventListener('click', function() { if (currentTask < tasks.length - 1) showTask(currentTask + 1); });
