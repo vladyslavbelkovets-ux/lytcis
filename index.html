@@ -149,6 +149,23 @@
     align-self: center;
   }
   .task-item .btn-remove:hover { background: #fee; color: #e53935; }
+  .task-item .btn-attach {
+    width: 28px; height: 28px; border: none; background: none; color: #bbb; font-size: 15px;
+    cursor: pointer; border-radius: 4px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+    align-self: center; transition: color .15s;
+  }
+  .task-item .btn-attach:hover { color: #555; }
+  .task-item .btn-attach.has-file { color: #4a90d9; }
+  .task-attach-preview {
+    display: flex; align-items: center; gap: 6px; margin-top: 6px;
+    padding: 4px 8px; background: #f0f6ff; border-radius: 6px; font-size: 12px; color: #4a90d9;
+  }
+  .task-attach-preview img { height: 32px; width: 32px; object-fit: cover; border-radius: 4px; }
+  .task-attach-preview .attach-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .task-attach-preview .btn-remove-attach {
+    background: none; border: none; color: #aaa; font-size: 14px; cursor: pointer; padding: 2px; line-height: 1;
+  }
+  .task-attach-preview .btn-remove-attach:hover { color: #e53935; }
   .btn-add-task {
     width: 100%; padding: 10px; border: 2px dashed #d0d0d0; border-radius: 8px; background: none;
     font-size: 14px; color: #888; cursor: pointer; font-family: inherit; transition: all .15s;
@@ -576,7 +593,6 @@ create policy "read videos"
     <!-- Prescreening -->
     <div class="field">
       <div class="screening-toggle-row">
-        <span class="screening-toggle-label">Прескрінінг</span>
         <button class="screening-toggle-btn" id="screeningToggleBtn" data-on="false">Додати прескрінінг</button>
       </div>
       <div id="screeningSection" style="display:none;margin-top:12px;">
@@ -1265,12 +1281,43 @@ create policy "read videos"
         '<span class="drag-handle" title="Перетягнути">⠿</span>' +
         '<select><option value="task">Task</option><option value="verbal">Verbal</option><option value="input">Input</option><option value="scenario">Scenario</option></select>' +
         '<textarea rows="1" placeholder="Опишіть завдання…"></textarea>' +
+        '<button class="btn-attach" title="Прикріпити файл">📎</button>' +
+        '<input type="file" accept="image/*,.pdf" style="display:none">' +
         '<button class="btn-remove" title="Видалити">&times;</button>';
       if (type) item.querySelector('select').value = type;
       var ta = item.querySelector('textarea');
       if (text) { ta.value = text; setTimeout(function() { autoResize(ta); }, 0); }
       ta.addEventListener('input', function() { autoResize(this); });
       item.querySelector('.btn-remove').addEventListener('click', function() { item.remove(); });
+
+      // Attach file
+      var attachBtn = item.querySelector('.btn-attach');
+      var fileInput = item.querySelector('input[type=file]');
+      attachBtn.addEventListener('click', function() { fileInput.click(); });
+      fileInput.addEventListener('change', function() {
+        var file = fileInput.files[0];
+        if (!file) return;
+        item._attachFile = file;
+        attachBtn.classList.add('has-file');
+        // Show preview
+        var existing = item.querySelector('.task-attach-preview');
+        if (existing) existing.remove();
+        var preview = document.createElement('div');
+        preview.className = 'task-attach-preview';
+        var isImage = file.type.startsWith('image/');
+        var imgHtml = isImage ? '<img src="' + URL.createObjectURL(file) + '">' : '📄';
+        preview.innerHTML = imgHtml + '<span class="attach-name">' + file.name + '</span><button class="btn-remove-attach">&times;</button>';
+        preview.querySelector('.btn-remove-attach').addEventListener('click', function() {
+          item._attachFile = null;
+          attachBtn.classList.remove('has-file');
+          preview.remove();
+          fileInput.value = '';
+        });
+        // Insert preview below the task row (wrap in flex column)
+        item.style.flexWrap = 'wrap';
+        item.appendChild(preview);
+        preview.style.width = '100%';
+      });
 
       // Drag and drop
       item.addEventListener('dragstart', function(e) {
@@ -1471,16 +1518,31 @@ create policy "read videos"
         var items = taskList.querySelectorAll('.task-item'), tasks = [];
         for (var i = 0; i < items.length; i++) {
           var t = items[i].querySelector('textarea').value.trim();
-          if (t) tasks.push({ type: items[i].querySelector('select').value, text: t });
+          if (t) tasks.push({ type: items[i].querySelector('select').value, text: t, _itemEl: items[i] });
         }
         if (!tasks.length) { alert('Додайте хоча б одне завдання'); return; }
 
         var limitVal = parseInt(document.getElementById('respondentLimit').value) || null;
         var screening = collectScreening();
-        var tasksData = screening.length ? { screening: screening, tasks: tasks } : tasks;
 
         btn.disabled = true; btn.textContent = 'Створення…';
         try {
+          // Upload task attachments
+          var testIdTemp = crypto.randomUUID();
+          for (var i = 0; i < tasks.length; i++) {
+            var el = tasks[i]._itemEl;
+            delete tasks[i]._itemEl;
+            if (el && el._attachFile) {
+              btn.textContent = 'Завантаження файлу ' + (i + 1) + '…';
+              var ext = el._attachFile.name.split('.').pop() || 'bin';
+              var attachPath = 'attachments/' + testIdTemp + '/' + i + '.' + ext;
+              await SB.upload(attachPath, el._attachFile);
+              tasks[i].attachment = attachPath;
+            }
+          }
+
+          var tasksData = screening.length ? { screening: screening, tasks: tasks } : tasks;
+          btn.textContent = 'Створення…';
           var deviceLabel = currentDevice === 'both' ? '🖥📱 ' : currentDevice === 'mobile' ? '📱 ' : '🖥 ';
           var result = await SB.post('/rest/v1/tests', {
             name: deviceLabel + (name || url.replace(/^https?:\/\//, '').slice(0, 40)),
@@ -1913,6 +1975,24 @@ create policy "read videos"
       var task = tasks[idx];
       taskNumber.textContent = (idx + 1) + ' / ' + tasks.length;
       taskText.textContent = task.text;
+
+      // Show attachment if present
+      var existingAttach = $('overlayAttachment');
+      if (existingAttach) existingAttach.remove();
+      if (task.attachment) {
+        var attachUrl = cfg.s + '/storage/v1/object/public/videos/' + task.attachment;
+        var attachEl = document.createElement('div');
+        attachEl.id = 'overlayAttachment';
+        attachEl.style.cssText = 'margin-bottom:10px;';
+        var isImg = /\.(png|jpg|jpeg|gif|webp|svg)$/i.test(task.attachment);
+        if (isImg) {
+          attachEl.innerHTML = '<img src="' + attachUrl + '" style="max-width:100%;max-height:160px;object-fit:contain;border-radius:8px;display:block;">';
+        } else {
+          attachEl.innerHTML = '<a href="' + attachUrl + '" target="_blank" style="color:#aaa;font-size:12px;text-decoration:none;">📄 Відкрити файл</a>';
+        }
+        taskText.before(attachEl);
+      }
+
       var badges = {
         task: { cls: 'type-task', icon: ICON_TASK, label: 'Task' },
         verbal: { cls: 'type-verbal', icon: ICON_VERBAL, label: 'Verbal' },
