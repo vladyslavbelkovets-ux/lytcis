@@ -782,7 +782,7 @@ create policy "read videos"
             <div class="import-step-title">
               <span class="import-step-num">2</span>Встав відповідь AI сюди
             </div>
-            <textarea class="import-ta" id="importText" placeholder="**1. (Task)** — Next Button: DONE&#10;Текст завдання&#10;&#10;**2. (Verbal Response)** — Next Button: SPEAKING DONE&#10;Текст питання…"></textarea>
+            <textarea class="import-ta" id="importText" placeholder="1. (TASK)&#10;Текст завдання&#10;&#10;2. (VERBAL)&#10;Текст питання…"></textarea>
             <div class="import-actions">
               <button class="btn btn-dark" id="importParseBtn" style="font-size:13px;padding:8px 16px;">Додати завдання</button>
               <button class="btn" id="importCancelBtn" style="font-size:13px;padding:8px 14px;">Закрити</button>
@@ -1725,7 +1725,7 @@ create policy "read videos"
     document.getElementById('addTaskBtn').onclick = function() { addTaskRow('task', ''); };
 
     // ===== PASTE LIST / IMPORT =====
-    var IMPORT_PROMPT = 'You are helping format UX research tasks for a usability testing tool.\n\nConvert the questions/tasks I provide into this exact format:\n\n**1. (Task)** — Next Button: DONE\nTask description here\n\n**2. (Verbal Response)** — Next Button: SPEAKING DONE\nVerbal question here\n\n**3. (Input)** — Next Button: DONE\nInput question here\n\n**4. (Fullscreen)** — Next Button: DONE\nScenario or context text here\n\nRules:\n- Use (Task) when the participant needs to perform an action\n- Use (Verbal Response) when the participant should think aloud or describe something\n- Use (Input) when the participant needs to type a written answer\n- Use (Fullscreen) for scenario setup or context screens\n- Keep the exact format, including **bold** markers and numbering\n- Do not add any explanation, just output the formatted list\n\nHere are my questions/tasks:\n[PASTE YOUR QUESTIONS HERE]';
+    var IMPORT_PROMPT = 'Format my UX research questions into this exact structure:\n\n1. (TASK)\nText\n\n2. (VERBAL)\nText\n\n3. (INPUT)\nText\n\n4. (FULLSCREEN)\nText\n\nRules:\n- TASK — participant performs an action\n- VERBAL — participant thinks aloud or describes something\n- INPUT — participant types a written answer\n- FULLSCREEN — scenario or context screen shown before a task\n- Output only the formatted list, no extra explanation\n\nMy questions:\n[PASTE YOUR QUESTIONS HERE]';
 
     document.getElementById('promptPreview').textContent = IMPORT_PROMPT;
 
@@ -1758,7 +1758,7 @@ create policy "read videos"
     document.getElementById('importParseBtn').onclick = function() {
       var text = importText.value.trim();
       if (!text) return;
-      var headerRe = /\*\*\d+\.\s*\(([^)]+)\)\*\*[^\n]*/g;
+      var headerRe = /^\d+\.\s*\(([^)]+)\)/gm;
       var positions = [], m;
       while ((m = headerRe.exec(text)) !== null) {
         positions.push({ start: m.index, end: m.index + m[0].length, type: m[1] });
