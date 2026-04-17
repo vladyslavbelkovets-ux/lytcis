@@ -1011,8 +1011,8 @@ create policy "read videos"
     initCreatePage();
 
     document.getElementById('btnNewTest').addEventListener('click', function() { showPage('pageCreate', true); });
-    document.getElementById('backFromCreate').addEventListener('click', function() { history.back(); });
-    document.getElementById('backFromDetail').addEventListener('click', function() { history.back(); });
+    document.getElementById('backFromCreate').addEventListener('click', function() { showPage('pageDashboard'); loadDashboard(); });
+    document.getElementById('backFromDetail').addEventListener('click', function() { showPage('pageDashboard'); loadDashboard(); });
     document.getElementById('btnSettings').addEventListener('click', function() { showPage('pageSetup', true); initSetup(); });
 
     // Handle browser back/forward
