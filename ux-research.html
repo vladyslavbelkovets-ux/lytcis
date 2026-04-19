@@ -1021,13 +1021,13 @@ create policy "delete videos"
   <!-- Instruction step 2: draggable overlay -->
   <div class="welcome-screen" id="instructionStep2" style="display:none;">
     <div class="welcome-card" style="max-width:720px;">
-      <h2>Move the question panel</h2>
+      <h2 id="instruction2Title">Move the question panel</h2>
       <div class="welcome-time">It won't get in your way</div>
       <div class="instruction-gif-placeholder" id="instructionGif">
-        <video src="demo-overlay.mp4" autoplay loop muted playsinline
+        <video id="instruction2Video" src="demo-overlay.mp4" autoplay loop muted playsinline
           style="width:100%;border-radius:12px;display:block;"></video>
       </div>
-      <p style="font-size:14px;color:#555;line-height:1.6;margin:24px 0;">
+      <p id="instruction2Text" style="font-size:14px;color:#555;line-height:1.6;margin:24px 0;">
         You can <strong>drag and drop</strong> this window anywhere on the page so it doesn't cover the content you need to interact with.
       </p>
       <button class="btn-start btn-start-big" id="instructionNext2">Got it</button>
@@ -2788,6 +2788,18 @@ create policy "delete videos"
       };
       $('instructionNext1').onclick = function() {
         $('instructionStep1').style.display = 'none';
+        // Swap content for mobile
+        if (isMobile) {
+          $('instruction2Title').textContent = 'Keep it out of the way';
+          $('instruction2Text').innerHTML =
+            'Tap the <strong>arrow</strong> to collapse the panel into a small floating button. ' +
+            'You can also <strong>drag it</strong> anywhere on the screen so it doesn\'t cover what you need.';
+          var vid = $('instruction2Video');
+          if (vid) {
+            vid.src = 'demo-overlay-mobile.mp4';
+            vid.load();
+          }
+        }
         $('instructionStep2').style.display = 'flex';
       };
       $('instructionNext2').onclick = function() {
