@@ -2401,38 +2401,56 @@ create policy "read videos"
       });
 
       // Make FAB draggable; tap (without drag) expands overlay
-      var fabDragState = { dragging: false, moved: false, sx: 0, sy: 0, ox: 0, oy: 0 };
+      var fabDragState = { dragging: false, moved: false, touch: false, sx: 0, sy: 0, ox: 0, oy: 0 };
+      function expandOverlay() {
+        overlayFab.style.display = 'none';
+        overlay.style.display = 'block';
+      }
       function fabStart(e) {
-        var t = e.touches ? e.touches[0] : e;
-        fabDragState.dragging = true; fabDragState.moved = false;
+        var isTouch = !!e.touches;
+        var t = isTouch ? e.touches[0] : e;
+        fabDragState.dragging = true; fabDragState.moved = false; fabDragState.touch = isTouch;
         fabDragState.sx = t.clientX; fabDragState.sy = t.clientY;
         var rect = overlayFab.getBoundingClientRect();
         fabDragState.ox = rect.left; fabDragState.oy = rect.top;
         overlayFab.style.right = 'auto'; overlayFab.style.bottom = 'auto';
         overlayFab.style.left = rect.left + 'px'; overlayFab.style.top = rect.top + 'px';
-        if (e.cancelable) e.preventDefault();
       }
       function fabMove(e) {
         if (!fabDragState.dragging) return;
         var t = e.touches ? e.touches[0] : e;
         var dx = t.clientX - fabDragState.sx, dy = t.clientY - fabDragState.sy;
-        if (Math.abs(dx) > 4 || Math.abs(dy) > 4) fabDragState.moved = true;
+        if (Math.abs(dx) > 4 || Math.abs(dy) > 4) {
+          fabDragState.moved = true;
+          if (e.cancelable) e.preventDefault();
+        }
         var nx = Math.max(4, Math.min(window.innerWidth - overlayFab.offsetWidth - 4, fabDragState.ox + dx));
         var ny = Math.max(4, Math.min(window.innerHeight - overlayFab.offsetHeight - 4, fabDragState.oy + dy));
         overlayFab.style.left = nx + 'px'; overlayFab.style.top = ny + 'px';
       }
-      function fabEnd() { fabDragState.dragging = false; }
-      overlayFab.addEventListener('touchstart', fabStart, { passive: false });
+      function fabEnd(e) {
+        if (!fabDragState.dragging) return;
+        var wasTouch = fabDragState.touch;
+        var wasMoved = fabDragState.moved;
+        fabDragState.dragging = false;
+        if (wasTouch && !wasMoved) {
+          if (e && e.cancelable) e.preventDefault();
+          expandOverlay();
+        }
+      }
+      overlayFab.addEventListener('touchstart', fabStart, { passive: true });
       overlayFab.addEventListener('touchmove', fabMove, { passive: false });
       overlayFab.addEventListener('touchend', fabEnd);
+      overlayFab.addEventListener('touchcancel', fabEnd);
       overlayFab.addEventListener('mousedown', fabStart);
       window.addEventListener('mousemove', fabMove);
       window.addEventListener('mouseup', fabEnd);
 
-      overlayFab.addEventListener('click', function() {
+      overlayFab.addEventListener('click', function(e) {
+        // Touch taps are handled in fabEnd; ignore synthetic click.
+        if (fabDragState.touch) { fabDragState.touch = false; return; }
         if (fabDragState.moved) { fabDragState.moved = false; return; }
-        overlayFab.style.display = 'none';
-        overlay.style.display = 'block';
+        expandOverlay();
       });
     }
 
