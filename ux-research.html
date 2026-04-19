@@ -1362,15 +1362,6 @@ create policy "delete videos"
     cancel.onclick = close;
   }
 
-  // ===== SHORT URL =====
-  async function shortenUrl(url) {
-    try {
-      var r = await fetch('https://tinyurl.com/api-create.php?url=' + encodeURIComponent(url));
-      if (r.ok) { var s = await r.text(); if (s.startsWith('http')) return s; }
-    } catch(e) {}
-    return url;
-  }
-
   // ===== ICONS =====
   var ICON_TASK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 15l-2 5L9 9l11 4-5 2z"/><path d="M22 22l-5-5"/></svg>';
   var ICON_VERBAL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>';
@@ -1652,22 +1643,18 @@ create policy "delete videos"
       }
     };
 
-    // Copy link (with TinyURL shortening)
-    document.getElementById('detailCopyLink').onclick = async function() {
+    // Copy link
+    document.getElementById('detailCopyLink').onclick = function() {
       var btn = this;
       var cfg = { t: test.id, s: SB.url, k: SB.key };
-      var fullLink = location.origin + location.pathname + '#' + encodeConfig(cfg);
-      btn.disabled = true; btn.textContent = 'Скорочення…';
-      var link = await shortenUrl(fullLink);
-      try {
-        await navigator.clipboard.writeText(link);
+      var link = location.origin + location.pathname + '#' + encodeConfig(cfg);
+      navigator.clipboard.writeText(link).then(function() {
         btn.textContent = '✓ Скопійовано!';
-        showToast('Посилання скопійовано' + (link !== fullLink ? ' (скорочено)' : ''), 'success');
-      } catch(e) {
-        showToast('Не вдалось скопіювати. Ось посилання:\n' + link, 'error');
-      }
-      btn.disabled = false;
-      setTimeout(function() { btn.textContent = 'Копіювати посилання'; }, 2000);
+        showToast('Посилання скопійовано', 'success');
+        setTimeout(function() { btn.textContent = 'Копіювати посилання'; }, 2000);
+      }).catch(function() {
+        showToast('Не вдалось скопіювати автоматично', 'error');
+      });
     };
 
     // Export responses as CSV
