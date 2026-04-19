@@ -1570,6 +1570,17 @@ create policy "delete videos"
   // ===== TEST DETAIL =====
   async function openTestDetail(test, initialCount) {
     showPage('pageDetail', true);
+    // Reset all action buttons to default state
+    var resetBtns = [
+      { id: 'detailDelete',    text: '🗑 Видалити' },
+      { id: 'detailDuplicate', text: '⧉ Дублювати' },
+      { id: 'detailExport',   text: '⬇ Завантажити відповіді' },
+      { id: 'detailCopyLink', text: 'Копіювати посилання' },
+    ];
+    resetBtns.forEach(function(b) {
+      var el = document.getElementById(b.id);
+      if (el) { el.disabled = false; el.textContent = b.text; }
+    });
     document.getElementById('detailName').textContent = test.name || 'Без назви';
     var isScreenshot = test.url === '__screenshots__';
     document.getElementById('detailUrl').textContent = isScreenshot ? '🖼 Тест скріншотів' : test.url;
