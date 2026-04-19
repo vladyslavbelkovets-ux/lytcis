@@ -127,6 +127,9 @@
   .response-card video { width: 100%; border-radius: 8px; margin-bottom: 10px; background: #000; }
   .btn-download-video { display: inline-block; margin-bottom: 12px; padding: 6px 14px; font-size: 13px; color: #333; background: #f0f0f0; border-radius: 8px; text-decoration: none; cursor: pointer; }
   .btn-download-video:hover { background: #e0e0e0; }
+  .rc-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 4px; }
+  .btn-delete-response { display: inline-block; padding: 6px 14px; font-size: 13px; color: #c62828; background: #fde8e8; border: none; border-radius: 8px; cursor: pointer; font-family: inherit; }
+  .btn-delete-response:hover { background: #fbc8c8; }
   .response-card .rc-answer { font-size: 13px; margin-bottom: 6px; }
   .response-card .rc-answer .rc-q { color: #888; }
   .response-card .rc-answer .rc-a { color: #1a1a1a; font-weight: 500; }
@@ -1652,13 +1655,18 @@ create policy "read videos"
         card.className = 'response-card';
         var date = new Date(resp.created_at).toLocaleString('uk-UA', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
         var deviceBadge = resp.device ? '<span style="display:inline-block;margin-left:8px;font-size:11px;font-weight:600;padding:2px 7px;border-radius:4px;background:' + (resp.device === 'mobile' ? '#e3f2fd;color:#1565c0' : '#f3e5f5;color:#6a1b9a') + '">' + (resp.device === 'mobile' ? '📱 Mobile' : '🖥️ Desktop') + '</span>' : '';
+        var vUrl = resp.video_path ? SB.videoUrl(resp.video_path) : null;
+        var ext = resp.video_path ? (resp.video_path.split('.').pop() || 'webm') : 'webm';
         var html = '<div class="rc-date">' + date + deviceBadge + '</div>';
-        if (resp.video_path) {
-          var vUrl = SB.videoUrl(resp.video_path);
-          var ext = resp.video_path.split('.').pop() || 'webm';
+        if (vUrl) {
           html += '<video controls preload="metadata" src="' + vUrl + '"></video>';
+        }
+        html += '<div class="rc-actions">';
+        if (vUrl) {
           html += '<button class="btn-download-video" data-url="' + vUrl + '" data-name="recording-' + date.replace(/[^0-9a-zA-Zа-яА-ЯіІїЇєЄґҐ]/g, '_') + '.' + ext + '">⬇ Завантажити запис</button>';
         }
+        html += '<button class="btn-delete-response" data-resp-id="' + resp.id + '" data-video-path="' + (resp.video_path || '') + '">🗑 Видалити</button>';
+        html += '</div>';
         if (resp.answers && Object.keys(resp.answers).length) {
           Object.keys(resp.answers).forEach(function(k) {
             var a = resp.answers[k];
@@ -1698,6 +1706,40 @@ create policy "read videos"
             URL.revokeObjectURL(a.href);
           } catch(e) { window.open(btn.dataset.url, '_blank'); }
           btn.textContent = '⬇ Завантажити запис';
+        };
+      });
+
+      list.querySelectorAll('.btn-delete-response').forEach(function(btn) {
+        btn.onclick = async function() {
+          if (!confirm('Видалити цей запис? Цю дію неможливо скасувати.')) return;
+          btn.disabled = true;
+          btn.textContent = '⏳ Видалення…';
+          try {
+            var respId = btn.dataset.respId;
+            var videoPath = btn.dataset.videoPath;
+            // Delete DB row
+            var hdr = { 'apikey': SB.key, 'Authorization': 'Bearer ' + SB.key, 'Content-Type': 'application/json' };
+            var dbRes = await fetch(SB.url + '/rest/v1/responses?id=eq.' + respId, { method: 'DELETE', headers: hdr });
+            if (!dbRes.ok) throw new Error(await dbRes.text());
+            // Delete video from storage if present
+            if (videoPath) {
+              await fetch(SB.url + '/storage/v1/object/videos', {
+                method: 'DELETE',
+                headers: hdr,
+                body: JSON.stringify({ prefixes: [videoPath] })
+              });
+            }
+            // Remove card from DOM & update count
+            var card = btn.closest('.response-card');
+            card.remove();
+            var remaining = list.querySelectorAll('.response-card').length;
+            document.getElementById('responsesTitle').textContent = 'Відповіді (' + remaining + ')';
+            if (!remaining) list.innerHTML = '<div class="empty-state"><p>Ще немає відповідей</p></div>';
+          } catch(e) {
+            alert('Помилка видалення: ' + e.message);
+            btn.disabled = false;
+            btn.textContent = '🗑 Видалити';
+          }
         };
       });
     } catch(e) {
