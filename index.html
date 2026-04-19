@@ -255,7 +255,7 @@
   /* ===== RESPONDENT VIEW ===== */
   .overlay {
     position: fixed; z-index: 10000;
-    top: 20px; left: 50%; transform: translateX(-50%);
+    top: 20px; right: 20px; left: auto; transform: none;
     width: 420px; max-width: calc(100vw - 32px);
     background: #1a1a1a; color: #fff; border-radius: 14px;
     box-shadow: 0 8px 32px rgba(0,0,0,.3), 0 2px 8px rgba(0,0,0,.15);
@@ -366,6 +366,23 @@
   }
   .btn-start { background: #4caf50; color: #fff; }
   .btn-start:hover { background: #43a047; }
+  .btn-start-big {
+    padding: 16px 48px; font-size: 17px; font-weight: 700; border-radius: 12px;
+    letter-spacing: .3px; min-width: 200px;
+  }
+  .overlay-back-btn {
+    background: none; border: none; color: rgba(255,255,255,.45); cursor: pointer;
+    padding: 4px 6px; border-radius: 6px; display: flex; align-items: center;
+    justify-content: center; transition: color .15s;
+  }
+  .overlay-back-btn:hover { color: rgba(255,255,255,.9); }
+  .overlay-back-btn svg { display: block; }
+  .instruction-gif-placeholder {
+    background: #f5f5f5; border-radius: 12px; min-height: 180px;
+    display: flex; align-items: center; justify-content: center;
+    margin: 16px 0; border: 1px dashed #ddd;
+  }
+  .instruction-gif-placeholder img { max-width: 100%; border-radius: 12px; }
   .btn-next { background: #fff; color: #1a1a1a; }
   .btn-next:hover { background: #e0e0e0; }
   .btn-finish { background: #e53935; color: #fff; }
@@ -939,10 +956,60 @@ create policy "read videos"
         </div>
       </div>
       <div class="permissions" style="display:none;"></div>
-      <button class="btn-start" id="startBtn">Start</button>
+      <button class="btn-start btn-start-big" id="startBtn">Start</button>
       <p class="welcome-reward-note">⚠️ Reward will only be granted for complete participation and honest answers throughout the entire session.</p>
     </div>
   </div>
+
+  <!-- Instruction step 1: task types -->
+  <div class="welcome-screen" id="instructionStep1" style="display:none;">
+    <div class="welcome-card">
+      <h2>Types of questions</h2>
+      <div class="welcome-time">You will see 3 types during the test</div>
+      <div class="welcome-rules">
+        <div class="welcome-rule">
+          <div class="welcome-rule-icon" style="background:#2979ff;color:#fff;">T</div>
+          <div class="welcome-rule-text">
+            <strong>TASK</strong>
+            Complete an action on the site. Click "TASK DONE" when finished.
+          </div>
+        </div>
+        <div class="welcome-rule">
+          <div class="welcome-rule-icon" style="background:#ab47bc;color:#fff;">V</div>
+          <div class="welcome-rule-text">
+            <strong>VERBAL</strong>
+            Answer out loud — speak your thoughts. Click "SPEAKING DONE" when finished.
+          </div>
+        </div>
+        <div class="welcome-rule">
+          <div class="welcome-rule-icon" style="background:#ef6c00;color:#fff;">W</div>
+          <div class="welcome-rule-text">
+            <strong>WRITTEN RESPONSE</strong>
+            Type your answer in the input field and click DONE.
+          </div>
+        </div>
+      </div>
+      <button class="btn-start btn-start-big" id="instructionNext1">Got it</button>
+    </div>
+  </div>
+
+  <!-- Instruction step 2: draggable overlay -->
+  <div class="welcome-screen" id="instructionStep2" style="display:none;">
+    <div class="welcome-card">
+      <h2>Move the question panel</h2>
+      <div class="welcome-time">It won't get in your way</div>
+      <div class="instruction-gif-placeholder" id="instructionGif">
+        <div style="color:#bbb;font-size:13px;text-align:center;padding:60px 20px;">
+          🎬 GIF placeholder<br><span style="font-size:11px;">Drag-and-drop demo</span>
+        </div>
+      </div>
+      <p style="font-size:14px;color:#555;line-height:1.6;margin:24px 0;">
+        You can <strong>drag and drop</strong> this window anywhere on the page so it doesn't cover the content you need to interact with.
+      </p>
+      <button class="btn-start btn-start-big" id="instructionNext2">Got it</button>
+    </div>
+  </div>
+
   <div class="screening-screen" id="screeningScreen">
     <div class="screening-card">
       <div class="sc-label">Screening</div>
@@ -983,6 +1050,9 @@ create policy "read videos"
   <div class="overlay" id="overlay" style="display:none;">
     <div class="overlay-drag" id="overlayDrag">
       <div class="drag-dots"><span><i></i><i></i></span><span><i></i><i></i></span><span><i></i><i></i></span></div>
+      <button class="overlay-back-btn" id="overlayBackBtn" title="Previous question" style="display:none;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
       <div class="rec-indicator"><div class="rec-dot idle" id="recDot"></div><span id="timer">00:00</span></div>
       <div class="spacer"></div>
       <span class="task-counter" id="taskNumber"></span>
@@ -1532,6 +1602,23 @@ create policy "read videos"
         card.innerHTML = html;
         list.appendChild(card);
       });
+      // Fix WebM duration: MediaRecorder-produced WebM files lack duration metadata,
+      // which makes the video element show 0:00 / "Infinity" and the progress bar
+      // stays frozen. Seeking to the end forces the browser to compute the real duration.
+      list.querySelectorAll('video').forEach(function(v) {
+        v.addEventListener('loadedmetadata', function onMeta() {
+          if (v.duration === Infinity || isNaN(v.duration) || v.duration === 0) {
+            var onSeeked = function() {
+              v.currentTime = 0;
+              v.removeEventListener('seeked', onSeeked);
+            };
+            v.addEventListener('seeked', onSeeked);
+            try { v.currentTime = 1e6; } catch(e) {}
+          }
+          v.removeEventListener('loadedmetadata', onMeta);
+        });
+      });
+
       list.querySelectorAll('.btn-download-video').forEach(function(btn) {
         btn.onclick = async function() {
           btn.textContent = '⏳ Завантаження…';
@@ -2246,7 +2333,38 @@ create policy "read videos"
         overlay.style.display = 'none';
         overlayFab.style.display = 'flex';
       });
+
+      // Make FAB draggable; tap (without drag) expands overlay
+      var fabDragState = { dragging: false, moved: false, sx: 0, sy: 0, ox: 0, oy: 0 };
+      function fabStart(e) {
+        var t = e.touches ? e.touches[0] : e;
+        fabDragState.dragging = true; fabDragState.moved = false;
+        fabDragState.sx = t.clientX; fabDragState.sy = t.clientY;
+        var rect = overlayFab.getBoundingClientRect();
+        fabDragState.ox = rect.left; fabDragState.oy = rect.top;
+        overlayFab.style.right = 'auto'; overlayFab.style.bottom = 'auto';
+        overlayFab.style.left = rect.left + 'px'; overlayFab.style.top = rect.top + 'px';
+        if (e.cancelable) e.preventDefault();
+      }
+      function fabMove(e) {
+        if (!fabDragState.dragging) return;
+        var t = e.touches ? e.touches[0] : e;
+        var dx = t.clientX - fabDragState.sx, dy = t.clientY - fabDragState.sy;
+        if (Math.abs(dx) > 4 || Math.abs(dy) > 4) fabDragState.moved = true;
+        var nx = Math.max(4, Math.min(window.innerWidth - overlayFab.offsetWidth - 4, fabDragState.ox + dx));
+        var ny = Math.max(4, Math.min(window.innerHeight - overlayFab.offsetHeight - 4, fabDragState.oy + dy));
+        overlayFab.style.left = nx + 'px'; overlayFab.style.top = ny + 'px';
+      }
+      function fabEnd() { fabDragState.dragging = false; }
+      overlayFab.addEventListener('touchstart', fabStart, { passive: false });
+      overlayFab.addEventListener('touchmove', fabMove, { passive: false });
+      overlayFab.addEventListener('touchend', fabEnd);
+      overlayFab.addEventListener('mousedown', fabStart);
+      window.addEventListener('mousemove', fabMove);
+      window.addEventListener('mouseup', fabEnd);
+
       overlayFab.addEventListener('click', function() {
+        if (fabDragState.moved) { fabDragState.moved = false; return; }
         overlayFab.style.display = 'none';
         overlay.style.display = 'block';
       });
@@ -2511,17 +2629,27 @@ create policy "read videos"
     // ---- Website respondent (existing) ----
     function showWelcome() {
       welcomeScreen.style.display = 'flex';
-      var perms = document.querySelector('.welcome-card .permissions');
-      if (isMobile) {
-        var mins = tasks.length <= 5 ? '5–10' : tasks.length <= 12 ? '10–15' : '15–20';
-        $('welcomeTaskCount').textContent = 'About ' + mins + ' minutes · ' + tasks.length + ' step' + (tasks.length > 1 ? 's' : '');
-        perms.innerHTML = '<span>After clicking "Start", your browser will ask permission for:</span><span>• Microphone access (to record your voice)</span>';
-      } else {
-        var mins = tasks.length <= 5 ? '5–10' : tasks.length <= 12 ? '10–15' : '15–20';
-        $('welcomeTaskCount').textContent = 'About ' + mins + ' minutes · ' + tasks.length + ' step' + (tasks.length > 1 ? 's' : '');
-        perms.innerHTML = '<span>After clicking "Start", your browser will ask permission for:</span><span>• Screen recording</span><span>• Microphone access</span>';
+      var perms = document.querySelector('#welcomeScreen .permissions');
+      var mins = tasks.length <= 5 ? '5–10' : tasks.length <= 12 ? '10–15' : '15–20';
+      $('welcomeTaskCount').textContent = 'About ' + mins + ' minutes · ' + tasks.length + ' step' + (tasks.length > 1 ? 's' : '');
+      if (perms) {
+        perms.innerHTML = isMobile
+          ? '<span>After clicking "Start", your browser will ask permission for:</span><span>• Microphone access (to record your voice)</span>'
+          : '<span>After clicking "Start", your browser will ask permission for:</span><span>• Screen recording</span><span>• Microphone access</span>';
       }
-      startBtn.onclick = isMobile ? startMobileWebsiteTest : startWebsiteTest;
+      // Wire instruction flow: Start → Step 1 → Step 2 → actual test
+      startBtn.onclick = function() {
+        welcomeScreen.style.display = 'none';
+        $('instructionStep1').style.display = 'flex';
+      };
+      $('instructionNext1').onclick = function() {
+        $('instructionStep1').style.display = 'none';
+        $('instructionStep2').style.display = 'flex';
+      };
+      $('instructionNext2').onclick = function() {
+        $('instructionStep2').style.display = 'none';
+        (isMobile ? startMobileWebsiteTest : startWebsiteTest)();
+      };
     }
 
     // Mobile: mic-only recording, open site in iframe, show overlay
@@ -2652,7 +2780,7 @@ create policy "read videos"
       var badges = {
         task: { cls: 'type-task', icon: ICON_TASK, label: 'Task' },
         verbal: { cls: 'type-verbal', icon: ICON_VERBAL, label: 'Verbal' },
-        input: { cls: 'type-input', icon: ICON_INPUT, label: 'Input' },
+        input: { cls: 'type-input', icon: ICON_INPUT, label: 'Written response' },
         fullscreen: { cls: 'type-fullscreen', icon: ICON_SCENARIO, label: 'Fullscreen' },
         scenario: { cls: 'type-fullscreen', icon: ICON_SCENARIO, label: 'Fullscreen' }
       };
@@ -2667,10 +2795,16 @@ create policy "read videos"
       finishBtn.textContent = btnLabel;
       nextBtn.style.display = (idx < tasks.length - 1) ? 'inline-block' : 'none';
       finishBtn.style.display = isLast ? 'inline-block' : 'none';
+
+      // Back button — visible from second task onwards
+      $('overlayBackBtn').style.display = idx > 0 ? 'flex' : 'none';
     }
 
     nextBtn.addEventListener('click', function() { if (currentTask < tasks.length - 1) showTask(currentTask + 1); });
     finishBtn.addEventListener('click', finishRecording);
+    $('overlayBackBtn').addEventListener('click', function() {
+      if (currentTask > 0) showTask(currentTask - 1);
+    });
 
 
     function finishRecording() {
