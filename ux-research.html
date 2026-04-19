@@ -2272,7 +2272,8 @@ create policy "delete videos"
 
       for (var i = 0; i < positions.length; i++) {
         var contentEnd = i + 1 < positions.length ? positions[i + 1].start : text.length;
-        var taskText = text.slice(positions[i].end, contentEnd).replace(/^\s*\n+/, '').replace(/\n+\s*$/, '').trim();
+        var rawBlock = text.slice(positions[i].end, contentEnd);
+        var taskText = rawBlock.split('\n').map(function(l) { return l.trim(); }).filter(function(l) { return l.length > 0; }).join('\n');
         if (!taskText) continue;
         var t = positions[i].type.toLowerCase().trim();
         var type = t.includes('verbal') ? 'verbal' : t.includes('input') ? 'input' : t.includes('fullscreen') || t.includes('scenario') ? 'fullscreen' : 'task';
