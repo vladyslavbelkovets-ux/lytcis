@@ -125,10 +125,16 @@
   .response-card { background: #fff; border: 1px solid #e0e0e0; border-radius: 12px; padding: 16px 20px; margin-bottom: 12px; }
   .response-card .rc-date { font-size: 12px; color: #888; margin-bottom: 10px; }
   .response-card video { width: 100%; border-radius: 8px; margin-bottom: 10px; background: #000; }
-  .btn-download-video { display: inline-block; margin-bottom: 12px; padding: 6px 14px; font-size: 13px; color: #333; background: #f0f0f0; border-radius: 8px; text-decoration: none; cursor: pointer; }
-  .btn-download-video:hover { background: #e0e0e0; }
-  .rc-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 4px; }
-  .btn-delete-response { display: inline-block; padding: 6px 14px; font-size: 13px; color: #e53935; background: none; border: 1px solid #e53935; border-radius: 8px; cursor: pointer; font-family: inherit; }
+  .rc-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 8px 0 12px; }
+  .rc-actions button, .rc-actions .btn-download-video {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 7px 16px; font-size: 13px; font-family: inherit; font-weight: 500;
+    border-radius: 8px; cursor: pointer; border: 1px solid transparent;
+    text-decoration: none; white-space: nowrap; line-height: 1;
+  }
+  .btn-download-video { color: #333; background: #f0f0f0; border-color: #e0e0e0; }
+  .btn-download-video:hover { background: #e4e4e4; }
+  .btn-delete-response { color: #e53935; background: none; border-color: #e53935; }
   .btn-delete-response:hover { background: #fbe9e7; }
   .response-card .rc-answer { font-size: 13px; margin-bottom: 6px; }
   .response-card .rc-answer .rc-q { color: #888; }
