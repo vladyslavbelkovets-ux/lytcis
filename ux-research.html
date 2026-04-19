@@ -1158,16 +1158,67 @@ create policy "read videos"
       return r.json();
     },
     async upload(path, blob) {
-      var r = await fetch(this.url + '/storage/v1/object/videos/' + path, {
-        method: 'POST',
-        headers: { 'apikey': this.key, 'Authorization': 'Bearer ' + this.key, 'Content-Type': blob.type || 'video/webm' },
-        body: blob
-      });
-      if (!r.ok) throw new Error(await r.text());
-      return this.url + '/storage/v1/object/public/videos/' + path;
+      // Try direct POST first; fall back to resumable TUS on 413 / Payload too large
+      try {
+        var r = await fetch(this.url + '/storage/v1/object/videos/' + path, {
+          method: 'POST',
+          headers: { 'apikey': this.key, 'Authorization': 'Bearer ' + this.key, 'Content-Type': blob.type || 'video/webm' },
+          body: blob
+        });
+        if (r.ok) return this.url + '/storage/v1/object/public/videos/' + path;
+        var txt = await r.text();
+        if (r.status !== 413 && !/too large|exceeded the maximum/i.test(txt)) throw new Error(txt);
+      } catch(err) {
+        if (!/413|too large|exceeded/i.test(err.message || '')) throw err;
+      }
+      return uploadResumable(this.url, this.key, path, blob);
     },
     videoUrl: function(path) { return this.url + '/storage/v1/object/public/videos/' + path; }
   };
+
+  // Supabase TUS resumable upload (handles files > 50MB)
+  async function uploadResumable(baseUrl, key, path, blob) {
+    var meta = 'bucketName ' + btoa('videos') + ',objectName ' + btoa(path) +
+               ',contentType ' + btoa(blob.type || 'video/webm') +
+               ',cacheControl ' + btoa('3600');
+    var createRes = await fetch(baseUrl + '/storage/v1/upload/resumable', {
+      method: 'POST',
+      headers: {
+        'authorization': 'Bearer ' + key,
+        'apikey': key,
+        'tus-resumable': '1.0.0',
+        'upload-length': String(blob.size),
+        'upload-metadata': meta,
+        'x-upsert': 'true'
+      }
+    });
+    if (!createRes.ok) throw new Error('Resumable create failed: ' + await createRes.text());
+    var uploadUrl = createRes.headers.get('location');
+    if (!uploadUrl) throw new Error('No upload URL returned from resumable endpoint');
+    if (uploadUrl.indexOf('http') !== 0) uploadUrl = baseUrl + uploadUrl;
+
+    var chunkSize = 6 * 1024 * 1024; // 6 MiB
+    var offset = 0;
+    while (offset < blob.size) {
+      var end = Math.min(offset + chunkSize, blob.size);
+      var chunk = blob.slice(offset, end);
+      var patchRes = await fetch(uploadUrl, {
+        method: 'PATCH',
+        headers: {
+          'authorization': 'Bearer ' + key,
+          'apikey': key,
+          'tus-resumable': '1.0.0',
+          'upload-offset': String(offset),
+          'content-type': 'application/offset+octet-stream'
+        },
+        body: chunk
+      });
+      if (!patchRes.ok) throw new Error('Resumable PATCH at ' + offset + ': ' + await patchRes.text());
+      offset = parseInt(patchRes.headers.get('upload-offset'), 10);
+      if (isNaN(offset)) throw new Error('Invalid upload-offset in PATCH response');
+    }
+    return baseUrl + '/storage/v1/object/public/videos/' + path;
+  }
 
   // Also support external SB creds (for respondent links)
   function sbFrom(url, key) {
@@ -1191,13 +1242,19 @@ create policy "read videos"
         return r.json();
       },
       async upload(path, blob) {
-        var r = await fetch(url + '/storage/v1/object/videos/' + path, {
-          method: 'POST',
-          headers: { 'apikey': key, 'Authorization': 'Bearer ' + key, 'Content-Type': blob.type || 'video/webm' },
-          body: blob
-        });
-        if (!r.ok) throw new Error(await r.text());
-        return url + '/storage/v1/object/public/videos/' + path;
+        try {
+          var r = await fetch(url + '/storage/v1/object/videos/' + path, {
+            method: 'POST',
+            headers: { 'apikey': key, 'Authorization': 'Bearer ' + key, 'Content-Type': blob.type || 'video/webm' },
+            body: blob
+          });
+          if (r.ok) return url + '/storage/v1/object/public/videos/' + path;
+          var txt = await r.text();
+          if (r.status !== 413 && !/too large|exceeded the maximum/i.test(txt)) throw new Error(txt);
+        } catch(err) {
+          if (!/413|too large|exceeded/i.test(err.message || '')) throw err;
+        }
+        return uploadResumable(url, key, path, blob);
       }
     };
   }
@@ -2658,7 +2715,7 @@ create policy "read videos"
       try {
         var mic = await navigator.mediaDevices.getUserMedia({ audio: true });
         var mimeAudio = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm';
-        recorder = new MediaRecorder(mic, { mimeType: mimeAudio });
+        recorder = new MediaRecorder(mic, { mimeType: mimeAudio, audioBitsPerSecond: 48000 });
         recorder.ondataavailable = function(e) { if (e.data.size > 0) chunks.push(e.data); };
         recorder.onstop = function() { handleDone(new Blob(chunks, { type: recorder.mimeType })); };
         recorder.start(1000);
@@ -2694,7 +2751,7 @@ create policy "read videos"
           if (recorder && recorder.state !== 'inactive') finishRecording();
         });
 
-        recorder = new MediaRecorder(combined, { mimeType: getBestMime(), videoBitsPerSecond: 2500000 });
+        recorder = new MediaRecorder(combined, { mimeType: getBestMime(), videoBitsPerSecond: 600000, audioBitsPerSecond: 64000 });
         recorder.ondataavailable = function(e) { if (e.data.size > 0) chunks.push(e.data); };
         recorder.onstop = function() { handleDone(new Blob(chunks, { type: recorder.mimeType })); };
         recorder.start(1000);
@@ -2833,7 +2890,8 @@ create policy "read videos"
       var videoPath = cfg.t + '/' + respId + '.webm';
 
       try {
-        uploadStatus.textContent = 'Uploading recording…';
+        var sizeMb = (blob.size / 1024 / 1024).toFixed(1);
+        uploadStatus.textContent = 'Uploading recording (' + sizeMb + ' MB)…';
         await sb.upload(videoPath, blob);
 
         uploadStatus.textContent = 'Saving response…';
