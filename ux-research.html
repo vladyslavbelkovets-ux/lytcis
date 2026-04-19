@@ -1376,8 +1376,14 @@ create policy "delete videos"
     var dragging = false, ox = 0, oy = 0;
     handle.addEventListener('mousedown', start);
     handle.addEventListener('touchstart', start, { passive: false });
+    function blockIframe(on) {
+      // Prevent iframe from swallowing mouse events during drag
+      var f = document.getElementById('testFrame');
+      if (f) f.style.pointerEvents = on ? 'none' : '';
+    }
     function start(e) {
       dragging = true; el.classList.add('dragging');
+      blockIframe(true);
       var r = el.getBoundingClientRect();
       el.style.transform = 'none'; el.style.left = r.left + 'px'; el.style.top = r.top + 'px';
       var cx = e.touches ? e.touches[0].clientX : e.clientX;
@@ -1396,6 +1402,7 @@ create policy "delete videos"
     }
     function stop() {
       dragging = false; el.classList.remove('dragging');
+      blockIframe(false);
       document.removeEventListener('mousemove', move); document.removeEventListener('mouseup', stop);
       document.removeEventListener('touchmove', move); document.removeEventListener('touchend', stop);
     }
