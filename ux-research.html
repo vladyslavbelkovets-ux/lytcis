@@ -2267,9 +2267,8 @@ create policy "delete videos"
         showToast('Не вдалось розпарсити. Перевір формат відповіді AI.', 'error');
         return;
       }
-      // Remove default empty row if only one and empty
-      var existing = taskList.querySelectorAll('.task-item');
-      if (existing.length === 1 && !existing[0].querySelector('textarea').value.trim()) existing[0].remove();
+      // Clear all existing tasks before importing
+      taskList.innerHTML = '';
 
       for (var i = 0; i < positions.length; i++) {
         var contentEnd = i + 1 < positions.length ? positions[i + 1].start : text.length;
