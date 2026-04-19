@@ -111,6 +111,9 @@
   .detail-tasks { margin-bottom: 24px; padding: 16px; background: #fff; border-radius: 10px; border: 1px solid #e0e0e0; }
   .detail-tasks h3 { font-size: 13px; font-weight: 600; margin-bottom: 10px; color: #555; }
   .detail-task-item { font-size: 13px; padding: 4px 0; color: #444; }
+  .detail-task-hidden { display: none; }
+  .btn-tasks-expand { margin-top: 10px; padding: 8px 16px; background: none; border: 1px solid #d0d0d0; border-radius: 8px; font-size: 13px; font-weight: 600; color: #555; cursor: pointer; font-family: inherit; transition: background .15s; }
+  .btn-tasks-expand:hover { background: #f5f5f5; }
   .detail-task-item .dt-type { display: inline-block; font-size: 10px; font-weight: 700; text-transform: uppercase; padding: 2px 6px; border-radius: 4px; color: #fff; margin-right: 6px; }
   .dt-type.t-task { background: #2979ff; }
   .dt-type.t-verbal { background: #ab47bc; }
@@ -1611,14 +1614,24 @@ create policy "delete videos"
         tasksHtml += '</div>';
       });
     } else {
+      var TASKS_PREVIEW = 5;
       tasksHtml += '<h3 style="font-size:13px;font-weight:600;margin-bottom:10px;color:#555;">Завдання (' + actualTasks.length + ')</h3>';
-      actualTasks.forEach(function(t) {
+      actualTasks.forEach(function(t, i) {
         var typeLabel = (t.type === 'scenario') ? 'fullscreen' : (t.type || 'task');
         var typeClass = (t.type === 'scenario') ? 'fullscreen' : typeLabel;
-        tasksHtml += '<div class="detail-task-item"><span class="dt-type t-' + typeClass + '">' + typeLabel + '</span>' + esc(t.text) + '</div>';
+        var hidden = i >= TASKS_PREVIEW ? ' class="detail-task-item detail-task-hidden"' : ' class="detail-task-item"';
+        tasksHtml += '<div' + hidden + '><span class="dt-type t-' + typeClass + '">' + typeLabel + '</span>' + esc(t.text) + '</div>';
       });
+      if (actualTasks.length > TASKS_PREVIEW) {
+        tasksHtml += '<button class="btn-tasks-expand" id="btnTasksExpand">Показати всі (' + actualTasks.length + ')</button>';
+      }
     }
     document.getElementById('detailTasks').innerHTML = tasksHtml;
+    var expandBtn = document.getElementById('btnTasksExpand');
+    if (expandBtn) expandBtn.onclick = function() {
+      document.querySelectorAll('.detail-task-hidden').forEach(function(el) { el.classList.remove('detail-task-hidden'); });
+      expandBtn.remove();
+    };
 
     // Edit test
     document.getElementById('detailEdit').onclick = function() { openEditPage(test); };
