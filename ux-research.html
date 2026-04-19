@@ -741,6 +741,19 @@
   </div>
 </div>
 
+<!-- ===== PASSWORD GATE ===== -->
+<div class="page" id="pageAuth">
+  <div class="setup-card" style="margin-top:120px;">
+    <h2 style="margin-bottom:6px;">🔒 UX Research Tool</h2>
+    <p class="subtitle">Введіть пароль для доступу</p>
+    <div class="field">
+      <input type="password" id="authPasswordInput" placeholder="Пароль" autocomplete="current-password" style="font-size:15px;padding:12px 14px;">
+    </div>
+    <p id="authError" style="color:#e53935;font-size:13px;margin-top:-10px;margin-bottom:12px;display:none;">Неправильний пароль</p>
+    <button class="btn-primary" id="authSubmitBtn">Увійти</button>
+  </div>
+</div>
+
 <!-- ===== SETUP (first time) ===== -->
 <div class="page" id="pageSetup">
   <div class="setup-card">
@@ -1423,13 +1436,45 @@ create policy "delete videos"
 
   SB.init();
 
+  // ===== AUTH =====
+  var APP_PASSWORD = 'uni2024';
+  var AUTH_KEY = 'uxr_auth';
+
+  function isAuthed() { return localStorage.getItem(AUTH_KEY) === APP_PASSWORD; }
+
+  function initAuth(onSuccess) {
+    showPage('pageAuth');
+    var input = document.getElementById('authPasswordInput');
+    var errEl = document.getElementById('authError');
+    var btn = document.getElementById('authSubmitBtn');
+
+    function tryLogin() {
+      var val = input.value.trim();
+      if (val === APP_PASSWORD) {
+        localStorage.setItem(AUTH_KEY, APP_PASSWORD);
+        errEl.style.display = 'none';
+        onSuccess();
+      } else {
+        errEl.style.display = 'block';
+        input.value = '';
+        input.focus();
+      }
+    }
+    btn.onclick = tryLogin;
+    input.onkeydown = function(e) { if (e.key === 'Enter') tryLogin(); };
+    setTimeout(function() { input.focus(); }, 100);
+  }
+
   // Check if respondent link
   var hash = location.hash.slice(1), respondentConfig = null;
   if (hash) { try { respondentConfig = decodeConfig(hash); } catch(e) {} }
   if (respondentConfig && respondentConfig.t && respondentConfig.s) {
+    // Respondent links bypass auth
     initRespondent(respondentConfig);
-  } else {
+  } else if (isAuthed()) {
     initResearcher();
+  } else {
+    initAuth(initResearcher);
   }
 
   // ===== RESEARCHER =====
