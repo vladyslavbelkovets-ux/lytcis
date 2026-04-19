@@ -379,6 +379,9 @@
   }
   .overlay-back-btn:hover { color: rgba(255,255,255,.9); }
   .overlay-back-btn svg { display: block; }
+  .instruction-type-rule .task-badge { color: #fff; margin: 0 0 6px; font-size: 12px; padding: 4px 12px; }
+  .instruction-type-rule .task-badge svg { width: 14px; height: 14px; }
+  .instruction-type-rule .welcome-rule-text { display: flex; flex-direction: column; align-items: flex-start; }
   .instruction-gif-placeholder {
     background: #f5f5f5; border-radius: 12px; min-height: 180px;
     display: flex; align-items: center; justify-content: center;
@@ -975,24 +978,21 @@ create policy "read videos"
       <h2>Types of questions</h2>
       <div class="welcome-time">You will see 3 types during the test</div>
       <div class="welcome-rules">
-        <div class="welcome-rule">
-          <div class="welcome-rule-icon" style="background:#2979ff;color:#fff;">T</div>
+        <div class="welcome-rule instruction-type-rule">
           <div class="welcome-rule-text">
-            <strong>TASK</strong>
+            <span class="task-badge type-task" id="instructionBadgeTask"></span>
             Complete an action on the site. Click "TASK DONE" when finished.
           </div>
         </div>
-        <div class="welcome-rule">
-          <div class="welcome-rule-icon" style="background:#ab47bc;color:#fff;">V</div>
+        <div class="welcome-rule instruction-type-rule">
           <div class="welcome-rule-text">
-            <strong>VERBAL</strong>
+            <span class="task-badge type-verbal" id="instructionBadgeVerbal"></span>
             Answer out loud — speak your thoughts. Click "SPEAKING DONE" when finished.
           </div>
         </div>
-        <div class="welcome-rule">
-          <div class="welcome-rule-icon" style="background:#ef6c00;color:#fff;">W</div>
+        <div class="welcome-rule instruction-type-rule">
           <div class="welcome-rule-text">
-            <strong>WRITTEN RESPONSE</strong>
+            <span class="task-badge type-input" id="instructionBadgeInput"></span>
             Type your answer in the input field and click DONE.
           </div>
         </div>
@@ -2721,6 +2721,11 @@ create policy "read videos"
           ? '<span>After clicking "Start", your browser will ask permission for:</span><span>• Microphone access (to record your voice)</span>'
           : '<span>After clicking "Start", your browser will ask permission for:</span><span>• Screen recording</span><span>• Microphone access</span>';
       }
+      // Populate instruction badges with the same pills the user will see during the test
+      $('instructionBadgeTask').innerHTML = ICON_TASK + ' Task';
+      $('instructionBadgeVerbal').innerHTML = ICON_VERBAL + ' Verbal';
+      $('instructionBadgeInput').innerHTML = ICON_INPUT + ' Written response';
+
       // Wire instruction flow: Start → Step 1 → Step 2 → actual test
       startBtn.onclick = function() {
         welcomeScreen.style.display = 'none';
