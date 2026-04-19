@@ -397,6 +397,9 @@
   }
   .instruction-gif-placeholder img,
   .instruction-gif-placeholder video { width: 100%; border-radius: 12px; display: block; }
+  @media (max-width: 600px) {
+    .instruction-gif-placeholder video { width: auto; max-height: 320px; margin: 0 auto; }
+  }
   .btn-next { background: #fff; color: #1a1a1a; }
   .btn-next:hover { background: #e0e0e0; }
   .btn-finish { background: #e53935; color: #fff; }
