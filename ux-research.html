@@ -373,6 +373,8 @@
   .overlay-back-btn {
     background: none; border: none; color: rgba(255,255,255,.45); cursor: pointer;
     padding: 4px 6px; border-radius: 6px; display: flex; align-items: center;
+    gap: 4px; font-size: 12px; font-weight: 600; font-family: inherit;
+    letter-spacing: .3px; text-transform: uppercase;
     justify-content: center; transition: color .15s;
   }
   .overlay-back-btn:hover { color: rgba(255,255,255,.9); }
@@ -1058,9 +1060,10 @@ create policy "read videos"
       <div class="drag-dots"><span><i></i><i></i></span><span><i></i><i></i></span><span><i></i><i></i></span></div>
       <button class="overlay-back-btn" id="overlayBackBtn" title="Previous question" style="display:none;">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        <span>Back</span>
       </button>
-      <div class="rec-indicator"><div class="rec-dot idle" id="recDot"></div><span id="timer">00:00</span></div>
       <div class="spacer"></div>
+      <div class="rec-indicator"><div class="rec-dot idle" id="recDot"></div><span id="timer">00:00</span></div>
       <span class="task-counter" id="taskNumber"></span>
       <button class="overlay-collapse-btn" id="overlayCollapseBtn" title="Згорнути">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
