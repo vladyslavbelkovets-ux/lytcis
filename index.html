@@ -2445,11 +2445,11 @@ create policy "delete videos"
           insertAfter.after(item);
           item.after(divider);
         }
-        ta.focus();
+        tc.focus();
       } else {
         taskList.appendChild(item);
         taskList.appendChild(divider);
-        ta.focus();
+        tc.focus();
       }
       renumberTasks();
       return item;
