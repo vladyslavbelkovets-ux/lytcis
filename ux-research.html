@@ -2225,8 +2225,7 @@ create policy "delete videos"
       if (text) { ta.value = text; setTimeout(function() { autoResize(ta); }, 0); }
       ta.addEventListener('input', function() { autoResize(this); });
       item.querySelector('.btn-remove').addEventListener('click', function() {
-        var next = item.nextSibling;
-        if (next && next.classList && next.classList.contains('task-insert-row')) next.remove();
+        if (item._divider) item._divider.remove();
         item.remove();
         renumberTasks();
       });
@@ -2304,6 +2303,7 @@ create policy "delete videos"
         addTaskRow('task', '', item);
       });
       divider.appendChild(insertBtn);
+      item._divider = divider;
 
       if (insertAfter) {
         var afterDivider = insertAfter.nextSibling;
