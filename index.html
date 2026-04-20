@@ -153,6 +153,22 @@
   }
   .task-item.dragging { opacity: .4; }
   .task-item.drag-over { box-shadow: 0 -2px 0 0 #4a90d9; }
+  .task-insert-row {
+    display: flex; align-items: center; gap: 6px; margin: -2px 0 6px; opacity: 0;
+    transition: opacity .15s; height: 16px;
+  }
+  .task-item:hover + .task-insert-row, .task-insert-row:hover { opacity: 1; }
+  .task-insert-row::before, .task-insert-row::after {
+    content: ''; flex: 1; height: 1px; background: #d0d0d0;
+  }
+  .btn-insert-after {
+    flex-shrink: 0; width: 18px; height: 18px; border-radius: 50%;
+    border: 1px solid #bbb; background: #fff; color: #999;
+    font-size: 14px; line-height: 1; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    padding: 0; transition: border-color .1s, color .1s, background .1s;
+  }
+  .btn-insert-after:hover { border-color: #4a90d9; color: #4a90d9; background: #f0f6ff; }
   .task-top-row {
     display: flex; align-items: center; gap: 8px; margin-bottom: 8px;
   }
@@ -2161,7 +2177,7 @@ create policy "delete videos"
       ta.style.height = ta.scrollHeight + 'px';
     }
 
-    function addTaskRow(type, text) {
+    function addTaskRow(type, text, insertAfter) {
       var item = document.createElement('div');
       item.className = 'task-item';
       item.draggable = true;
@@ -2259,8 +2275,34 @@ create policy "delete videos"
         taskList.querySelectorAll('.task-item').forEach(function(el) { el.classList.remove('drag-over'); });
       });
 
-      taskList.appendChild(item);
-      ta.focus();
+      // Insert divider with "+" button
+      var divider = document.createElement('div');
+      divider.className = 'task-insert-row';
+      var insertBtn = document.createElement('button');
+      insertBtn.className = 'btn-insert-after';
+      insertBtn.title = 'Додати питання після';
+      insertBtn.textContent = '+';
+      insertBtn.addEventListener('click', function() {
+        addTaskRow('task', '', item);
+      });
+      divider.appendChild(insertBtn);
+
+      if (insertAfter) {
+        // Insert after insertAfter's divider (next sibling)
+        var afterDivider = insertAfter.nextSibling;
+        if (afterDivider && afterDivider.classList && afterDivider.classList.contains('task-insert-row')) {
+          afterDivider.after(item);
+          item.after(divider);
+        } else {
+          insertAfter.after(item);
+          item.after(divider);
+        }
+        ta.focus();
+      } else {
+        taskList.appendChild(item);
+        taskList.appendChild(divider);
+        ta.focus();
+      }
       return item;
     }
 
