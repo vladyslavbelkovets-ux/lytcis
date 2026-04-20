@@ -1437,7 +1437,7 @@ create policy "delete videos"
   SB.init();
 
   // ===== AUTH =====
-  var APP_PASSWORD = 'uni2024';
+  var APP_PASSWORD = 'uni_tech450';
   var AUTH_KEY = 'uxr_auth';
 
   function isAuthed() { return localStorage.getItem(AUTH_KEY) === APP_PASSWORD; }
@@ -1471,10 +1471,8 @@ create policy "delete videos"
   if (respondentConfig && respondentConfig.t && respondentConfig.s) {
     // Respondent links bypass auth
     initRespondent(respondentConfig);
-  } else if (isAuthed()) {
-    initResearcher();
   } else {
-    initAuth(initResearcher);
+    initResearcher();
   }
 
   // ===== RESEARCHER =====
