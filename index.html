@@ -2286,8 +2286,16 @@ create policy "delete videos"
           var items = Array.from(taskList.querySelectorAll('.task-item'));
           var fromIdx = items.indexOf(dragging);
           var toIdx = items.indexOf(item);
-          if (fromIdx < toIdx) item.after(dragging);
-          else item.before(dragging);
+          var dragDivider = dragging._divider;
+          if (fromIdx < toIdx) {
+            // Move item after target; move its divider right after it
+            item.after(dragging);
+            if (dragDivider) dragging.after(dragDivider);
+          } else {
+            // Move item before target; move its divider right after it
+            item.before(dragging);
+            if (dragDivider) dragging.after(dragDivider);
+          }
         }
         taskList.querySelectorAll('.task-item').forEach(function(el) { el.classList.remove('drag-over'); });
       });
