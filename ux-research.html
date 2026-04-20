@@ -2205,6 +2205,19 @@ create policy "delete videos"
   var currentEditTest = null; // set when editing an existing test
   var _addTaskRow, _addScreeningQuestion, _addScreeningOption; // exposed from initCreatePage
 
+  // ===== SHARED HELPERS (accessible from initCreatePage AND openEditPage) =====
+  function getItemText(item) {
+    var tc = item.querySelector('.task-content');
+    if (!tc) { var ta = item.querySelector('textarea'); return ta ? ta.value.trim() : ''; }
+    var html = tc.innerHTML;
+    return html
+      .replace(/<strong>([\s\S]*?)<\/strong>/gi,'**$1**')
+      .replace(/<b>([\s\S]*?)<\/b>/gi,'**$1**')
+      .replace(/<br\s*\/?>/gi,'\n')
+      .replace(/&nbsp;/g,' ').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>')
+      .replace(/<[^>]+>/g,'').trim();
+  }
+
   function initCreatePage() {
     var taskList = document.getElementById('taskList');
     taskList.innerHTML = '';
@@ -2249,18 +2262,6 @@ create policy "delete videos"
     document.getElementById('websiteFields').style.display = '';
     document.getElementById('screenshotFields').style.display = 'none';
     document.getElementById('screenList').innerHTML = '';
-
-    function getItemText(item) {
-      var tc = item.querySelector('.task-content');
-      if (!tc) { var ta = item.querySelector('textarea'); return ta ? ta.value.trim() : ''; }
-      var html = tc.innerHTML;
-      return html
-        .replace(/<strong>([\s\S]*?)<\/strong>/gi,'**$1**')
-        .replace(/<b>([\s\S]*?)<\/b>/gi,'**$1**')
-        .replace(/<br\s*\/?>/gi,'\n')
-        .replace(/&nbsp;/g,' ').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>')
-        .replace(/<[^>]+>/g,'').trim();
-    }
 
     function autoResize(ta) {
       ta.style.height = 'auto';
