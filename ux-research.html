@@ -161,6 +161,10 @@
   .task-insert-row::before, .task-insert-row::after {
     content: ''; flex: 1; height: 1px; background: #d0d0d0;
   }
+  .task-number {
+    font-size: 11px; font-weight: 700; color: #bbb; min-width: 16px;
+    text-align: right; flex-shrink: 0; user-select: none; line-height: 1;
+  }
   .btn-insert-after {
     flex-shrink: 0; width: 18px; height: 18px; border-radius: 50%;
     border: 1px solid #bbb; background: #fff; color: #999;
@@ -2177,6 +2181,13 @@ create policy "delete videos"
       ta.style.height = ta.scrollHeight + 'px';
     }
 
+    function renumberTasks() {
+      taskList.querySelectorAll('.task-item').forEach(function(el, i) {
+        var n = el.querySelector('.task-number');
+        if (n) n.textContent = (i + 1) + '.';
+      });
+    }
+
     function addTaskRow(type, text, insertAfter) {
       var item = document.createElement('div');
       item.className = 'task-item';
@@ -2185,6 +2196,7 @@ create policy "delete videos"
       item.innerHTML =
         '<div class="task-top-row">' +
           '<span class="drag-handle" title="Перетягнути">⠿</span>' +
+          '<span class="task-number"></span>' +
           '<div class="task-type-chips">' +
             '<button class="type-chip' + (activeType==='task'?' active':'') + '" data-type="task">Task</button>' +
             '<button class="type-chip' + (activeType==='verbal'?' active':'') + '" data-type="verbal">Verbal</button>' +
@@ -2212,7 +2224,12 @@ create policy "delete videos"
       var ta = item.querySelector('textarea');
       if (text) { ta.value = text; setTimeout(function() { autoResize(ta); }, 0); }
       ta.addEventListener('input', function() { autoResize(this); });
-      item.querySelector('.btn-remove').addEventListener('click', function() { item.remove(); });
+      item.querySelector('.btn-remove').addEventListener('click', function() {
+        var next = item.nextSibling;
+        if (next && next.classList && next.classList.contains('task-insert-row')) next.remove();
+        item.remove();
+        renumberTasks();
+      });
 
 
       // Attach file
@@ -2253,6 +2270,7 @@ create policy "delete videos"
       item.addEventListener('dragend', function() {
         item.classList.remove('dragging');
         taskList.querySelectorAll('.task-item').forEach(function(el) { el.classList.remove('drag-over'); });
+        renumberTasks();
       });
       item.addEventListener('dragover', function(e) {
         e.preventDefault();
@@ -2288,7 +2306,6 @@ create policy "delete videos"
       divider.appendChild(insertBtn);
 
       if (insertAfter) {
-        // Insert after insertAfter's divider (next sibling)
         var afterDivider = insertAfter.nextSibling;
         if (afterDivider && afterDivider.classList && afterDivider.classList.contains('task-insert-row')) {
           afterDivider.after(item);
@@ -2303,6 +2320,7 @@ create policy "delete videos"
         taskList.appendChild(divider);
         ta.focus();
       }
+      renumberTasks();
       return item;
     }
 
