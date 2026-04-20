@@ -1291,6 +1291,76 @@ create policy "delete videos"
     videoUrl: function(path) { return this.url + '/storage/v1/object/public/videos/' + path; }
   };
 
+  // ===== CLOUDFLARE R2 (video storage) =====
+  var R2 = {
+    endpoint:  'https://d0267a38e5de3a48ed89d07abf0d8eb5.r2.cloudflarestorage.com',
+    accessKey: 'bb994806620ecb654157818a5fdf4751',
+    secretKey: '6807e8ae2ed29ed265550a99870e1e09c0ed38ac2555c9662c9609efb0941842',
+    bucket:    'ux-videos',
+    publicUrl: 'https://pub-86207f9bc50140349eee597f349a6265.r2.dev',
+
+    videoUrl: function(path) { return this.publicUrl + '/' + path; },
+
+    async _sign(method, path, blob) {
+      var enc = new TextEncoder();
+      function toHex(buf) { return Array.from(new Uint8Array(buf)).map(function(b){return b.toString(16).padStart(2,'0');}).join(''); }
+      async function sha256(data) {
+        var buf = (data instanceof Blob) ? await data.arrayBuffer() : (typeof data === 'string' ? enc.encode(data) : data);
+        return toHex(await crypto.subtle.digest('SHA-256', buf));
+      }
+      async function hmac(keyBytes, msg) {
+        var k = await crypto.subtle.importKey('raw', keyBytes, {name:'HMAC',hash:'SHA-256'}, false, ['sign']);
+        return new Uint8Array(await crypto.subtle.sign('HMAC', k, enc.encode(msg)));
+      }
+
+      var now = new Date();
+      var dateTime = now.toISOString().replace(/[:\-]|\.\d{3}/g,'').slice(0,15)+'Z';
+      var dateOnly = dateTime.slice(0,8);
+      var host = new URL(this.endpoint).host;
+      var contentType = blob ? (blob.type || 'application/octet-stream') : '';
+      var payloadHash = blob ? await sha256(blob) : 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
+
+      var hdrs = {'host':host,'x-amz-content-sha256':payloadHash,'x-amz-date':dateTime};
+      if (contentType) hdrs['content-type'] = contentType;
+      var sortedKeys = Object.keys(hdrs).sort();
+      var canonicalHeaders = sortedKeys.map(function(k){return k+':'+hdrs[k];}).join('\n')+'\n';
+      var signedHeaders = sortedKeys.join(';');
+      var canonicalUri = '/'+this.bucket+'/'+path.split('/').map(encodeURIComponent).join('/');
+      var canonicalReq = [method, canonicalUri, '', canonicalHeaders, signedHeaders, payloadHash].join('\n');
+
+      var scope = dateOnly+'/auto/s3/aws4_request';
+      var strToSign = ['AWS4-HMAC-SHA256', dateTime, scope, await sha256(canonicalReq)].join('\n');
+
+      var kDate    = await hmac(enc.encode('AWS4'+this.secretKey), dateOnly);
+      var kRegion  = await hmac(kDate, 'auto');
+      var kService = await hmac(kRegion, 's3');
+      var kSign    = await hmac(kService, 'aws4_request');
+      var sig      = toHex(await hmac(kSign, strToSign));
+
+      var authHdr  = 'AWS4-HMAC-SHA256 Credential='+this.accessKey+'/'+scope+', SignedHeaders='+signedHeaders+', Signature='+sig;
+      var reqHdrs  = {'x-amz-date':dateTime,'x-amz-content-sha256':payloadHash,'Authorization':authHdr};
+      if (contentType) reqHdrs['content-type'] = contentType;
+      return { url: this.endpoint+'/'+this.bucket+'/'+path, headers: reqHdrs };
+    },
+
+    async upload(path, blob) {
+      var s = await this._sign('PUT', path, blob);
+      var r = await fetch(s.url, {method:'PUT', headers:s.headers, body:blob});
+      if (!r.ok) throw new Error('R2 upload failed ('+r.status+'): '+await r.text());
+      return path;
+    },
+
+    async delete(path) {
+      if (!path) return;
+      var s = await this._sign('DELETE', path, null);
+      await fetch(s.url, {method:'DELETE', headers:s.headers});
+    },
+
+    async deleteMany(paths) {
+      await Promise.all(paths.filter(Boolean).map(function(p){ return R2.delete(p); }));
+    }
+  };
+
   // Supabase TUS resumable upload (handles files > 50MB)
   async function uploadResumable(baseUrl, key, path, blob) {
     var meta = 'bucketName ' + btoa('videos') + ',objectName ' + btoa(path) +
@@ -1789,7 +1859,7 @@ create policy "delete videos"
           var row = [
             new Date(r.created_at).toLocaleString('uk-UA'),
             r.device || '',
-            r.video_path ? SB.videoUrl(r.video_path) : ''
+            r.video_path ? R2.videoUrl(r.video_path) : ''
           ];
           keys.forEach(function(k) {
             row.push(r.answers && r.answers[k] ? r.answers[k].a : '');
@@ -1821,13 +1891,8 @@ create policy "delete videos"
           // Delete responses from DB
           var r1 = await fetch(SB.url + '/rest/v1/responses?test_id=eq.' + test.id, { method: 'DELETE', headers: hdr });
           if (!r1.ok) throw new Error('Не вдалось видалити відповіді: ' + r1.status);
-          // Delete videos from Storage
-          if (videoPaths.length) {
-            await fetch(SB.url + '/storage/v1/object/videos', {
-              method: 'DELETE', headers: SB.headers({ 'Content-Type': 'application/json' }),
-              body: JSON.stringify({ prefixes: videoPaths })
-            });
-          }
+          // Delete videos from R2
+          await R2.deleteMany(videoPaths);
           // Delete test
           var r2 = await fetch(SB.url + '/rest/v1/tests?id=eq.' + test.id, { method: 'DELETE', headers: hdr });
           if (!r2.ok) throw new Error('Не вдалось видалити тест: ' + r2.status);
@@ -1865,7 +1930,7 @@ create policy "delete videos"
       card.className = 'response-card';
       var date = new Date(resp.created_at).toLocaleString('uk-UA', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
       var deviceBadge = resp.device ? '<span style="display:inline-block;margin-left:8px;font-size:11px;font-weight:600;padding:2px 7px;border-radius:4px;background:' + (resp.device === 'mobile' ? '#e3f2fd;color:#1565c0' : '#f3e5f5;color:#6a1b9a') + '">' + (resp.device === 'mobile' ? '📱 Mobile' : '🖥️ Desktop') + '</span>' : '';
-      var vUrl = resp.video_path ? SB.videoUrl(resp.video_path) : null;
+      var vUrl = resp.video_path ? R2.videoUrl(resp.video_path) : null;
       var ext = resp.video_path ? (resp.video_path.split('.').pop() || 'webm') : 'webm';
       var html = '<div class="rc-date">' + date + deviceBadge + '</div>';
       if (vUrl) html += '<video controls preload="metadata" src="' + vUrl + '"></video>';
@@ -1905,11 +1970,7 @@ create policy "delete videos"
             var hdr = SB.headers({ 'Content-Type': 'application/json' });
             var dbRes = await fetch(SB.url + '/rest/v1/responses?id=eq.' + respId, { method: 'DELETE', headers: hdr });
             if (!dbRes.ok) throw new Error(await dbRes.text());
-            if (videoPath) {
-              await fetch(SB.url + '/storage/v1/object/videos', {
-                method: 'DELETE', headers: hdr, body: JSON.stringify({ prefixes: [videoPath] })
-              });
-            }
+            if (videoPath) await R2.delete(videoPath);
             allResponses = allResponses.filter(function(r) { return r.id !== respId; });
             totalCount = allResponses.length;
             card.remove();
@@ -3288,7 +3349,7 @@ create policy "delete videos"
       try {
         var sizeMb = (blob.size / 1024 / 1024).toFixed(1);
         uploadStatus.textContent = 'Uploading recording (' + sizeMb + ' MB)…';
-        await sb.upload(videoPath, blob);
+        await R2.upload(videoPath, blob);
 
         uploadStatus.textContent = 'Saving response…';
         await sb.post('/rest/v1/responses', {
