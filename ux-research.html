@@ -1230,9 +1230,33 @@ create policy "delete videos"
   </div>
 </div>
 
+<script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
 <script>
 (function() {
   'use strict';
+
+  // ===== FFMPEG WebM→MP4 CONVERTER =====
+  var _ffmpegInst = null;
+  async function loadFFmpeg() {
+    if (_ffmpegInst && _ffmpegInst.isLoaded()) return _ffmpegInst;
+    var cf = window.FFmpeg;
+    _ffmpegInst = cf.createFFmpeg({
+      corePath: 'https://unpkg.com/@ffmpeg/core-st@0.11.1/dist/ffmpeg-core.js',
+      log: false
+    });
+    await _ffmpegInst.load();
+    return _ffmpegInst;
+  }
+  async function convertToMp4(blob, onProgress) {
+    var ff = await loadFFmpeg();
+    if (onProgress) ff.setProgress(function(p) { onProgress(Math.round((p.ratio || 0) * 100)); });
+    var inExt = blob.type.includes('mp4') ? 'mp4' : 'webm';
+    ff.FS('writeFile', 'in.' + inExt, await window.FFmpeg.fetchFile(blob));
+    await ff.run('-i', 'in.' + inExt, '-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '26', '-c:a', 'aac', '-b:a', '128k', '-movflags', 'faststart', 'out.mp4');
+    var data = ff.FS('readFile', 'out.mp4');
+    try { ff.FS('unlink', 'in.' + inExt); ff.FS('unlink', 'out.mp4'); } catch(e) {}
+    return new Blob([data.buffer], { type: 'video/mp4' });
+  }
 
   // ===== SUPABASE HELPERS =====
   var SB = {
@@ -1936,7 +1960,7 @@ create policy "delete videos"
       var html = '<div class="rc-date">' + date + deviceBadge + '</div>';
       if (vUrl) html += '<video controls preload="metadata" src="' + vUrl + '"></video>';
       html += '<div class="rc-actions">';
-      if (vUrl) html += '<button class="btn-download-video" data-url="' + vUrl + '" data-name="recording-' + date.replace(/[^0-9a-zA-Zа-яА-ЯіІїЇєЄґҐ]/g, '_') + '.' + ext + '">⬇ Завантажити запис</button>';
+      if (vUrl) html += '<button class="btn-download-video" data-url="' + vUrl + '" data-name="recording-' + date.replace(/[^0-9a-zA-Zа-яА-ЯіІїЇєЄґҐ]/g, '_') + '">⬇ Завантажити MP4</button>';
       html += '<button class="btn-delete-response" data-resp-id="' + resp.id + '" data-video-path="' + (resp.video_path || '') + '">🗑 Видалити</button>';
       html += '</div>';
       if (resp.answers && Object.keys(resp.answers).length) {
@@ -1947,17 +1971,30 @@ create policy "delete videos"
       }
       card.innerHTML = html;
 
-      // Download handler
+      // Download + convert handler
       var dlBtn = card.querySelector('.btn-download-video');
       if (dlBtn) dlBtn.onclick = async function() {
-        dlBtn.textContent = '⏳ Завантаження…';
+        dlBtn.disabled = true;
         try {
+          dlBtn.textContent = '⏳ Завантаження відео…';
           var r = await fetch(dlBtn.dataset.url);
+          if (!r.ok) throw new Error('HTTP ' + r.status);
           var blob = await r.blob();
-          var a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-          a.download = dlBtn.dataset.name; a.click(); URL.revokeObjectURL(a.href);
-        } catch(e) { window.open(dlBtn.dataset.url, '_blank'); }
-        dlBtn.textContent = '⬇ Завантажити запис';
+          var sizeMb = (blob.size / 1024 / 1024).toFixed(0);
+          dlBtn.textContent = '⏳ Завантаження FFmpeg…';
+          var mp4 = await convertToMp4(blob, function(pct) {
+            dlBtn.textContent = '⏳ Конвертація ' + pct + '%… (' + sizeMb + ' MB)';
+          });
+          var fname = (dlBtn.dataset.name || 'recording') + '.mp4';
+          var a = document.createElement('a'); a.href = URL.createObjectURL(mp4);
+          a.download = fname; a.click();
+          setTimeout(function() { URL.revokeObjectURL(a.href); }, 5000);
+        } catch(e) {
+          alert('Помилка: ' + e.message + '\nВідео відкриється у новій вкладці (WebM).');
+          window.open(dlBtn.dataset.url, '_blank');
+        }
+        dlBtn.disabled = false;
+        dlBtn.textContent = '⬇ Завантажити MP4';
       };
 
       // Delete handler
