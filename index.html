@@ -1158,7 +1158,6 @@ create policy "delete videos"
       <h2>Thank you! Now you can close this tab.</h2>
       <p>The test is complete. Your recording has been saved.</p>
       <div class="upload-status" id="uploadStatus"></div>
-      <div class="upload-status" id="convertStatus" style="font-size:12px;color:#999;margin-top:6px;"></div>
       <p class="done-reward-note">🎁 If you completed the session honestly and in full, your reward will be sent within 5 business days.</p>
     </div>
   </div>
@@ -3544,39 +3543,9 @@ create policy "delete videos"
 
         uploadStatus.textContent = 'Done! Thank you for participating.';
         uploadStatus.className = 'upload-status success';
-
-        // Background MP4 conversion — doesn't block the Done screen.
-        // If respondent closes the tab, WebM remains (researcher can convert manually).
-        backgroundConvert(blob, respId, videoPath);
       } catch(err) {
         uploadStatus.textContent = 'Error: ' + err.message;
         uploadStatus.className = 'upload-status error';
-      }
-    }
-
-    async function backgroundConvert(webmBlob, respId, webmPath) {
-      var convertStatus = $('convertStatus');
-      if (!convertStatus) return;
-      convertStatus.textContent = '📦 Finalizing format… you may close this tab anytime.';
-      try {
-        var start = Date.now();
-        var timer = setInterval(function() {
-          var sec = Math.round((Date.now() - start) / 1000);
-          convertStatus.textContent = '📦 Finalizing format (' + sec + 's)… you may close this tab.';
-        }, 1000);
-        var mp4Blob;
-        try { mp4Blob = await convertToMp4(webmBlob, null); }
-        finally { clearInterval(timer); }
-
-        var mp4Path = webmPath.replace(/\.webm$/, '.mp4');
-        convertStatus.textContent = '📦 Uploading final format…';
-        await R2.upload(mp4Path, mp4Blob);
-        await sb.patch('/rest/v1/responses?id=eq.' + respId, { video_path: mp4Path });
-        try { await R2.delete(webmPath); } catch(e) {}
-        convertStatus.textContent = '✓ Final format saved.';
-      } catch(e) {
-        // Silent fail — WebM remains in R2/DB, researcher can convert manually.
-        convertStatus.textContent = '';
       }
     }
   }
