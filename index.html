@@ -137,10 +137,20 @@
     border-radius: 8px; cursor: pointer; border: 1px solid transparent;
     text-decoration: none; white-space: nowrap; line-height: 1;
   }
+  .rc-actions .btn-download-video, .rc-actions .btn-download-audio {
+    min-width: 190px; justify-content: center;
+  }
   .btn-download-video { color: #333; background: #f0f0f0; border-color: #e0e0e0; }
   .btn-download-video:hover { background: #e4e4e4; }
+  .btn-download-audio { color: #333; background: #f0f0f0; border-color: #e0e0e0; }
+  .btn-download-audio:hover { background: #e4e4e4; }
   .btn-delete-response { color: #e53935; background: none; border-color: #e53935; }
   .btn-delete-response:hover { background: #fbe9e7; }
+  .rc-convert-status { display: none; width: 100%; margin-top: 2px; }
+  .rc-convert-status.visible { display: block; }
+  .rc-convert-text { font-size: 12px; color: #777; margin-bottom: 6px; }
+  .rc-convert-bar { height: 5px; background: #ececec; border-radius: 999px; overflow: hidden; }
+  .rc-convert-fill { width: 0%; height: 100%; background: #1a1a1a; transition: width .2s ease; }
   .response-card .rc-answer { font-size: 13px; margin-bottom: 6px; }
   .response-card .rc-answer .rc-q { color: #888; }
   .response-card .rc-answer .rc-a { color: #1a1a1a; font-weight: 500; }
@@ -1230,9 +1240,66 @@ create policy "delete videos"
   </div>
 </div>
 
+<script src="vendor/lamejs/lame.min.js"></script>
 <script>
 (function() {
   'use strict';
+
+  // ===== WEBM→MP3 CONVERTER =====
+  var _activeMp3Task = null;
+
+  function floatTo16BitPCM(input, offset, len) {
+    var out = new Int16Array(len);
+    for (var i = 0; i < len; i++) {
+      var s = Math.max(-1, Math.min(1, input[offset + i]));
+      out[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+    }
+    return out;
+  }
+
+  async function decodeAudioBlob(blob) {
+    var AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) throw new Error('Audio decoding is not supported in this browser');
+    var ctx = new AudioCtx();
+    try {
+      var arrayBuffer = await blob.arrayBuffer();
+      return await ctx.decodeAudioData(arrayBuffer.slice(0));
+    } catch(e) {
+      throw new Error('Не вдалося прочитати аудіодоріжку цього WebM');
+    } finally {
+      try { await ctx.close(); } catch(e) {}
+    }
+  }
+
+  function encodeAudioBufferToMp3(audioBuffer, onProgress) {
+    if (!window.lamejs || !window.lamejs.Mp3Encoder) throw new Error('MP3 encoder failed to load');
+    var channels = Math.min(audioBuffer.numberOfChannels || 1, 2);
+    var sampleRate = audioBuffer.sampleRate || 44100;
+    var kbps = 128;
+    var encoder = new window.lamejs.Mp3Encoder(channels, sampleRate, kbps);
+    var left = audioBuffer.getChannelData(0);
+    var right = channels > 1 ? audioBuffer.getChannelData(1) : null;
+    var blockSize = 1152;
+    var mp3Chunks = [];
+
+    for (var i = 0; i < left.length; i += blockSize) {
+      var len = Math.min(blockSize, left.length - i);
+      var leftChunk = floatTo16BitPCM(left, i, len);
+      var mp3buf;
+      if (channels > 1 && right) {
+        var rightChunk = floatTo16BitPCM(right, i, len);
+        mp3buf = encoder.encodeBuffer(leftChunk, rightChunk);
+      } else {
+        mp3buf = encoder.encodeBuffer(leftChunk);
+      }
+      if (mp3buf.length) mp3Chunks.push(new Uint8Array(mp3buf));
+      if (onProgress) onProgress(Math.round(((i + len) / left.length) * 100));
+    }
+
+    var end = encoder.flush();
+    if (end.length) mp3Chunks.push(new Uint8Array(end));
+    return new Blob(mp3Chunks, { type: 'audio/mpeg' });
+  }
 
   // ===== SUPABASE HELPERS =====
   var SB = {
@@ -1939,12 +2006,20 @@ create policy "delete videos"
       var date = new Date(resp.created_at).toLocaleString('uk-UA', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
       var deviceBadge = resp.device ? '<span style="display:inline-block;margin-left:8px;font-size:11px;font-weight:600;padding:2px 7px;border-radius:4px;background:' + (resp.device === 'mobile' ? '#e3f2fd;color:#1565c0' : '#f3e5f5;color:#6a1b9a') + '">' + (resp.device === 'mobile' ? '📱 Mobile' : '🖥️ Desktop') + '</span>' : '';
       var vUrl = resp.video_path ? R2.videoUrl(resp.video_path) : null;
+      var baseName = 'recording-' + date.replace(/[^0-9a-zA-Zа-яА-ЯіІїЇєЄґҐ]/g, '_');
       var html = '<div class="rc-date">' + date + deviceBadge + '</div>';
       if (vUrl) html += '<video controls preload="metadata" src="' + vUrl + '"></video>';
       html += '<div class="rc-actions">';
-      if (vUrl) html += '<button class="btn-download-video" data-url="' + vUrl + '" data-name="recording-' + date.replace(/[^0-9a-zA-Zа-яА-ЯіІїЇєЄґҐ]/g, '_') + '.webm">⬇ Завантажити WebM</button>';
+      if (vUrl) html += '<button class="btn-download-video" data-url="' + vUrl + '" data-name="' + baseName + '.webm">⬇ Завантажити WebM</button>';
+      if (vUrl) html += '<button class="btn-download-video btn-download-audio" data-url="' + vUrl + '" data-name="' + baseName + '.mp3">⬇ Завантажити MP3</button>';
       html += '<button class="btn-delete-response" data-resp-id="' + resp.id + '" data-video-path="' + (resp.video_path || '') + '">🗑 Видалити</button>';
       html += '</div>';
+      if (vUrl) {
+        html += '<div class="rc-convert-status">' +
+          '<div class="rc-convert-text"></div>' +
+          '<div class="rc-convert-bar"><div class="rc-convert-fill"></div></div>' +
+        '</div>';
+      }
       if (resp.answers && Object.keys(resp.answers).length) {
         Object.keys(resp.answers).forEach(function(k) {
           var a = resp.answers[k];
@@ -1969,6 +2044,73 @@ create policy "delete videos"
             window.open(dlBtn.dataset.url, '_blank');
           }
           dlBtn.textContent = '⬇ Завантажити WebM';
+        };
+      })();
+
+      var mp3Btn = card.querySelector('.btn-download-audio');
+      if (mp3Btn) (function() {
+        var statusBox = card.querySelector('.rc-convert-status');
+        var statusText = statusBox ? statusBox.querySelector('.rc-convert-text') : null;
+        var statusFill = statusBox ? statusBox.querySelector('.rc-convert-fill') : null;
+
+        function setStatus(text, percent) {
+          if (!statusBox || !statusText || !statusFill) return;
+          statusBox.classList.add('visible');
+          statusText.textContent = text;
+          statusFill.style.width = Math.max(0, Math.min(100, percent || 0)) + '%';
+        }
+
+        function clearStatus() {
+          if (!statusBox || !statusText || !statusFill) return;
+          statusBox.classList.remove('visible');
+          statusText.textContent = '';
+          statusFill.style.width = '0%';
+        }
+
+        mp3Btn.onclick = async function() {
+          if (_activeMp3Task && _activeMp3Task !== mp3Btn) {
+            showToast('Дочекайтесь завершення поточної MP3 конвертації', 'info');
+            return;
+          }
+
+          var startedAt = Date.now();
+          _activeMp3Task = mp3Btn;
+          mp3Btn.disabled = true;
+          mp3Btn.textContent = '⏳ Готуємо MP3…';
+          setStatus('Підготовка MP3 конвертера…', 5);
+          try {
+            mp3Btn.textContent = '⏳ Завантаження…';
+            setStatus('Завантаження запису…', 15);
+            var r = await fetch(mp3Btn.dataset.url);
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            var blob = await r.blob();
+            mp3Btn.textContent = '⏳ Читання аудіо…';
+            setStatus('Читання аудіодоріжки…', 28);
+            var audioBuffer = await decodeAudioBlob(blob);
+            mp3Btn.textContent = '⏳ Конвертація…';
+            setStatus('Конвертація в MP3… 0%', 40);
+            var mp3 = encodeAudioBufferToMp3(audioBuffer, function(pct) {
+              var elapsed = Math.round((Date.now() - startedAt) / 1000);
+              var uiPct = 40 + Math.round(pct * 0.55);
+              setStatus('Конвертація в MP3… ' + pct + '% · ' + elapsed + 'с', uiPct);
+            });
+            mp3Btn.textContent = '⬇ Збереження…';
+            setStatus('Підготовка завантаження…', 98);
+            var a = document.createElement('a');
+            a.href = URL.createObjectURL(mp3);
+            a.download = mp3Btn.dataset.name;
+            a.click();
+            setTimeout(function() { URL.revokeObjectURL(a.href); }, 5000);
+            setStatus('MP3 готовий', 100);
+            setTimeout(clearStatus, 1200);
+          } catch(e) {
+            setStatus('Помилка конвертації. Можна завантажити WebM.', 100);
+            showToast('Не вдалося створити MP3: ' + e.message, 'error');
+          } finally {
+            mp3Btn.disabled = false;
+            mp3Btn.textContent = '⬇ Завантажити MP3';
+            _activeMp3Task = null;
+          }
         };
       })();
 
