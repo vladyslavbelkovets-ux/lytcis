@@ -2081,8 +2081,20 @@ create policy "delete videos"
       if (dlBtn) (function() {
         var url = dlBtn.dataset.url;
         var fname = (dlBtn.dataset.name || 'recording') + '.mp4';
+        var webmFname = (dlBtn.dataset.name || 'recording') + '.webm';
         var convTimer = null;
         var autoSaveWhenReady = false;
+
+        // WebM fallback button — visible only while MP4 is in progress
+        var webmBtn = document.createElement('button');
+        webmBtn.className = 'btn-download-video';
+        webmBtn.style.cssText = 'display:none;font-size:12px;padding:5px 10px;color:#888;background:#f8f8f8;border-color:#ddd;';
+        webmBtn.textContent = '⬇ WebM';
+        webmBtn.title = 'Завантажити оригінал (WebM) поки конвертується MP4';
+        dlBtn.after(webmBtn);
+        webmBtn.onclick = function() { window.open(url, '_blank'); };
+
+        function showWebmBtn(visible) { webmBtn.style.display = visible ? '' : 'none'; }
 
         function saveMp4(blob) {
           var a = document.createElement('a');
@@ -2094,9 +2106,10 @@ create policy "delete videos"
 
         function onState(status, s) {
           stopTimer();
-          if (status === 'queued') dlBtn.textContent = '⏳ В черзі…';
-          else if (status === 'fetching') dlBtn.textContent = '⏳ Завантаження відео…';
+          if (status === 'queued') { dlBtn.textContent = '⏳ В черзі…'; showWebmBtn(true); }
+          else if (status === 'fetching') { dlBtn.textContent = '⏳ Завантаження відео…'; showWebmBtn(true); }
           else if (status === 'converting') {
+            showWebmBtn(true);
             var start = (s && s.startTime) || Date.now();
             var tick = function() {
               var sec = Math.round((Date.now() - start) / 1000);
@@ -2105,6 +2118,7 @@ create policy "delete videos"
             tick(); convTimer = setInterval(tick, 1000);
           }
           else if (status === 'ready') {
+            showWebmBtn(false);
             dlBtn.textContent = '⬇ Зберегти MP4';
             if (autoSaveWhenReady) {
               autoSaveWhenReady = false;
@@ -2112,6 +2126,7 @@ create policy "delete videos"
             }
           }
           else if (status === 'error') {
+            showWebmBtn(false);
             dlBtn.textContent = '⚠ Повторити';
             if (autoSaveWhenReady) {
               autoSaveWhenReady = false;
@@ -2130,7 +2145,6 @@ create policy "delete videos"
             return;
           }
           if (s && (s.status === 'queued' || s.status === 'fetching' || s.status === 'converting')) {
-            // already in progress — set flag so when it finishes it auto-saves
             autoSaveWhenReady = true;
             return;
           }
