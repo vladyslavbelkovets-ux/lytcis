@@ -108,18 +108,56 @@
   .detail-header h2 { font-size: 18px; margin-bottom: 4px; }
   .detail-header .detail-url { font-size: 13px; color: #888; word-break: break-all; }
   .detail-header .detail-limit { font-size: 12px; color: #aaa; margin-top: 4px; }
-  .detail-tasks { margin-bottom: 24px; padding: 16px; background: #fff; border-radius: 10px; border: 1px solid #e0e0e0; }
-  .detail-tasks h3 { font-size: 13px; font-weight: 600; margin-bottom: 10px; color: #555; }
-  .detail-task-item { font-size: 13px; padding: 4px 0; color: #444; }
+  .detail-tasks {
+    margin-bottom: 24px; padding: 14px 16px; background: #fff;
+    border-radius: 12px; border: 1px solid #e4e6ee;
+  }
+  .detail-tasks h3 { font-size: 15px; font-weight: 700; margin: 0; color: #353b48; letter-spacing: -.01em; }
+  .detail-tasks-section + .detail-tasks-section { margin-top: 14px; padding-top: 14px; border-top: 1px solid #eef0f5; }
+  .detail-tasks-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+  .detail-task-count {
+    display: inline-flex; align-items: center; justify-content: center; min-width: 30px; height: 24px;
+    padding: 0 8px; border-radius: 999px; background: #f1f3f8; color: #626b79; font-size: 11px; font-weight: 700;
+  }
+  .detail-task-list { display: flex; flex-direction: column; gap: 6px; }
+  .detail-task-item {
+    display: flex; gap: 10px; align-items: flex-start;
+    padding: 8px 10px; font-size: 13px; color: #444; background: #fafbfe;
+    border: 1px solid #eceef5; border-radius: 10px;
+  }
+  .detail-task-index {
+    display: inline-flex; align-items: center; justify-content: center; flex: 0 0 28px; width: 28px; height: 28px;
+    border-radius: 8px; background: #f1f3f8; color: #60697a; font-size: 12px; font-weight: 700;
+  }
+  .detail-task-body { flex: 1; min-width: 0; }
+  .detail-task-topline {
+    display: flex; align-items: center; margin-bottom: 6px;
+  }
+  .detail-task-copy { min-width: 0; font-size: 14px; line-height: 1.45; color: #343a46; }
+  .detail-task-options { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .detail-task-option {
+    display: inline-flex; align-items: center; gap: 5px; padding: 4px 8px; border-radius: 999px;
+    font-size: 11px; font-weight: 600; background: #f5f6fa; color: #5c6370; border: 1px solid #e7e9f0;
+  }
+  .detail-task-option.is-qualify { background: #edf8f1; color: #217a48; border-color: #d2eadb; }
+  .detail-task-option.is-disqualify { background: #fff1f0; color: #cb4d43; border-color: #f1d4cf; }
   .detail-task-hidden { display: none; }
-  .btn-tasks-expand { margin-top: 10px; padding: 8px 16px; background: none; border: 1px solid #d0d0d0; border-radius: 8px; font-size: 13px; font-weight: 600; color: #555; cursor: pointer; font-family: inherit; transition: background .15s; }
-  .btn-tasks-expand:hover { background: #f5f5f5; }
-  .detail-task-item .dt-type { display: inline-block; font-size: 10px; font-weight: 700; text-transform: uppercase; padding: 2px 6px; border-radius: 4px; color: #fff; margin-right: 6px; }
+  .btn-tasks-expand {
+    margin-top: 10px; width: 100%; padding: 9px 12px; background: #f6f7fb; border: 1px solid #e1e3eb;
+    border-radius: 10px; font-size: 13px; font-weight: 600; color: #4d5563; cursor: pointer; font-family: inherit; transition: background .15s;
+  }
+  .btn-tasks-expand:hover { background: #eef1f6; }
+  .detail-task-item .dt-type {
+    display: inline-flex; align-items: center; font-size: 10px; font-weight: 800; text-transform: uppercase;
+    justify-content: center; letter-spacing: .04em; padding: 4px 8px;
+    border-radius: 999px; color: #fff; line-height: 1; box-sizing: border-box;
+  }
   .dt-type.t-task { background: #2979ff; }
   .dt-type.t-verbal { background: #ab47bc; }
   .dt-type.t-input { background: #ef6c00; }
   .dt-type.t-scenario { background: #6c3fc5; }
   .dt-type.t-fullscreen { background: #6c3fc5; }
+  .dt-type.t-screening { background: #607d8b; }
 
   .detail-actions { display: flex; gap: 8px; margin-bottom: 24px; flex-wrap: wrap; }
 
@@ -708,9 +746,23 @@
   .screenshot-actions .btn-next, .screenshot-actions .btn-finish { padding: 10px 24px; }
 
   /* ===== SCREENSHOT DETAIL ===== */
-  .detail-screen-item { margin-bottom: 16px; }
-  .detail-screen-item img { width: 100%; border-radius: 8px; margin-bottom: 8px; }
-  .detail-screen-item .detail-task-item { padding-left: 8px; }
+  .detail-screen-item {
+    margin-bottom: 12px; padding: 10px; background: #fff; border: 1px solid #eceef5; border-radius: 12px;
+  }
+  .detail-screen-item:last-child { margin-bottom: 0; }
+  .detail-screen-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
+  .detail-screen-label { font-size: 11px; font-weight: 700; color: #5a6270; letter-spacing: .04em; text-transform: uppercase; }
+  .detail-screen-item img { width: 100%; border-radius: 10px; margin-bottom: 10px; border: 1px solid #ececf2; }
+  .detail-screen-questions { display: flex; flex-direction: column; gap: 6px; }
+  .detail-screen-item .detail-task-item { background: #fbfbfd; }
+
+  @media (max-width: 720px) {
+    .detail-tasks { padding: 12px; }
+    .detail-task-item { gap: 8px; padding: 8px 9px; }
+    .detail-task-index { flex-basis: 26px; width: 26px; height: 26px; border-radius: 7px; font-size: 11px; }
+    .detail-task-copy { font-size: 13.5px; }
+    .detail-screen-item { padding: 9px; }
+  }
 
   /* ===== MOBILE RESPONDENT ===== */
   @media (max-width: 600px) {
@@ -1817,46 +1869,70 @@ create policy "delete videos"
       actualTasks = rawTasks.tasks || []; detailScreening = rawTasks.screening || [];
     }
 
+    function renderDetailTaskItem(typeClass, typeLabel, text, index, extraHtml, hidden, customClass) {
+      var classes = 'detail-task-item';
+      if (hidden) classes += ' detail-task-hidden';
+      if (customClass) classes += ' ' + customClass;
+      var html = '<div class="' + classes + '">';
+      html += '<div class="detail-task-index">' + esc(String(index)) + '</div>';
+      html += '<div class="detail-task-body">';
+      html += '<div class="detail-task-topline"><span class="dt-type t-' + typeClass + '">' + esc(typeLabel) + '</span></div>';
+      html += '<div class="detail-task-copy">' + esc(text) + '</div>';
+      if (extraHtml) html += extraHtml;
+      html += '</div></div>';
+      return html;
+    }
+
     var tasksHtml = '';
 
     // Show screening if present
     if (detailScreening.length) {
-      tasksHtml += '<h3 style="font-size:13px;font-weight:600;margin-bottom:10px;color:#555;">Прескрінінг (' + detailScreening.length + ')</h3>';
-      detailScreening.forEach(function(sq) {
-        tasksHtml += '<div class="detail-task-item" style="margin-bottom:8px;">';
-        tasksHtml += '<span class="dt-type" style="background:#607d8b;">' + 'СКРІНІНГ' + '</span>' + esc(sq.q);
-        tasksHtml += '<div style="margin-top:4px;padding-left:4px;">';
+      tasksHtml += '<section class="detail-tasks-section">';
+      tasksHtml += '<div class="detail-tasks-header"><h3>Прескрінінг</h3><span class="detail-task-count">' + detailScreening.length + '</span></div>';
+      tasksHtml += '<div class="detail-task-list">';
+      detailScreening.forEach(function(sq, sqIdx) {
+        var optionsHtml = '<div class="detail-task-options">';
         sq.options.forEach(function(opt, i) {
           var isQualify = sq.qualify.indexOf(i) !== -1;
-          tasksHtml += '<span style="display:inline-block;margin-right:8px;font-size:11px;color:' + (isQualify ? '#4caf50' : '#e53935') + ';">' + (isQualify ? '✓ ' : '✗ ') + esc(opt) + '</span>';
+          optionsHtml += '<span class="detail-task-option ' + (isQualify ? 'is-qualify' : 'is-disqualify') + '">' + (isQualify ? '✓' : '✕') + ' ' + esc(opt) + '</span>';
         });
-        tasksHtml += '</div></div>';
+        optionsHtml += '</div>';
+        tasksHtml += renderDetailTaskItem('screening', 'screening', sq.q, 'S' + (sqIdx + 1), optionsHtml);
       });
-      tasksHtml += '<div style="border-top:1px solid #e0e0e0;margin:12px 0;"></div>';
+      tasksHtml += '</div></section>';
     }
 
     if (isScreenshot) {
-      tasksHtml += '<h3 style="font-size:13px;font-weight:600;margin-bottom:10px;color:#555;">Екрани (' + actualTasks.length + ')</h3>';
+      tasksHtml += '<section class="detail-tasks-section">';
+      tasksHtml += '<div class="detail-tasks-header"><h3>Екрани</h3><span class="detail-task-count">' + actualTasks.length + '</span></div>';
       actualTasks.forEach(function(screen, i) {
         tasksHtml += '<div class="detail-screen-item">';
+        tasksHtml += '<div class="detail-screen-header"><div class="detail-screen-label">Екран ' + (i + 1) + '</div><span class="detail-task-count">' + screen.questions.length + '</span></div>';
         tasksHtml += '<img src="' + SB.videoUrl(screen.image) + '" alt="Screen ' + (i + 1) + '">';
-        screen.questions.forEach(function(q) {
-          tasksHtml += '<div class="detail-task-item"><span class="dt-type t-' + q.type + '">' + q.type + '</span>' + esc(q.text) + '</div>';
+        tasksHtml += '<div class="detail-screen-questions">';
+        screen.questions.forEach(function(q, qIdx) {
+          var questionTypeLabel = (q.type === 'scenario') ? 'fullscreen' : (q.type || 'task');
+          var questionTypeClass = (q.type === 'scenario') ? 'fullscreen' : questionTypeLabel;
+          tasksHtml += renderDetailTaskItem(questionTypeClass, questionTypeLabel, q.text, qIdx + 1);
         });
-        tasksHtml += '</div>';
+        tasksHtml += '</div></div>';
       });
+      tasksHtml += '</section>';
     } else {
-      var TASKS_PREVIEW = 5;
-      tasksHtml += '<h3 style="font-size:13px;font-weight:600;margin-bottom:10px;color:#555;">Завдання (' + actualTasks.length + ')</h3>';
+      var TASKS_PREVIEW = 2;
+      tasksHtml += '<section class="detail-tasks-section">';
+      tasksHtml += '<div class="detail-tasks-header"><h3>Завдання</h3><span class="detail-task-count">' + actualTasks.length + '</span></div>';
+      tasksHtml += '<div class="detail-task-list">';
       actualTasks.forEach(function(t, i) {
         var typeLabel = (t.type === 'scenario') ? 'fullscreen' : (t.type || 'task');
         var typeClass = (t.type === 'scenario') ? 'fullscreen' : typeLabel;
-        var hidden = i >= TASKS_PREVIEW ? ' class="detail-task-item detail-task-hidden"' : ' class="detail-task-item"';
-        tasksHtml += '<div' + hidden + '><span class="dt-type t-' + typeClass + '">' + typeLabel + '</span>' + esc(t.text) + '</div>';
+        tasksHtml += renderDetailTaskItem(typeClass, typeLabel, t.text, i + 1, '', i >= TASKS_PREVIEW);
       });
+      tasksHtml += '</div>';
       if (actualTasks.length > TASKS_PREVIEW) {
         tasksHtml += '<button class="btn-tasks-expand" id="btnTasksExpand">Показати всі (' + actualTasks.length + ')</button>';
       }
+      tasksHtml += '</section>';
     }
     document.getElementById('detailTasks').innerHTML = tasksHtml;
     var expandBtn = document.getElementById('btnTasksExpand');
