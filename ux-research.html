@@ -1158,6 +1158,7 @@ create policy "delete videos"
       <h2>Thank you! Now you can close this tab.</h2>
       <p>The test is complete. Your recording has been saved.</p>
       <div class="upload-status" id="uploadStatus"></div>
+      <div class="upload-status" id="convertStatus" style="font-size:12px;color:#999;margin-top:6px;"></div>
       <p class="done-reward-note">🎁 If you completed the session honestly and in full, your reward will be sent within 5 business days.</p>
     </div>
   </div>
@@ -1519,6 +1520,13 @@ create policy "delete videos"
         });
         if (!r.ok) throw new Error(await r.text());
         return r.json();
+      },
+      async patch(path, body) {
+        var r = await fetch(url + path, {
+          method: 'PATCH', headers: this.headers(),
+          body: JSON.stringify(body)
+        });
+        if (!r.ok) throw new Error(await r.text());
       },
       async upload(path, blob) {
         try {
@@ -2019,6 +2027,32 @@ create policy "delete videos"
       });
     }
 
+    // Auto-persist: when a .webm response gets converted (by any means),
+    // upload the MP4 to R2, update DB, delete the old WebM. Silent on failure.
+    function autoPersistMp4(resp, url) {
+      if (!resp || !resp.video_path || !/\.webm$/.test(resp.video_path)) return;
+      mp4Queue.subscribe(url, async function(status, s) {
+        if (status !== 'ready' || !s || !s.blob) return;
+        if (mp4Queue.state[url] && mp4Queue.state[url].persisted) return;
+        mp4Queue.state[url].persisted = true;  // claim
+        try {
+          var webmPath = resp.video_path;
+          var mp4Path = webmPath.replace(/\.webm$/, '.mp4');
+          await R2.upload(mp4Path, s.blob);
+          var hdr = SB.headers();
+          await fetch(SB.url + '/rest/v1/responses?id=eq.' + resp.id, {
+            method: 'PATCH', headers: hdr, body: JSON.stringify({ video_path: mp4Path })
+          });
+          try { await R2.delete(webmPath); } catch(e) {}
+          resp.video_path = mp4Path;  // keep in-memory record fresh
+        } catch(e) {
+          mp4Queue.state[url].persisted = false;  // allow retry later
+        }
+      });
+      // Silently enqueue for background conversion
+      mp4Queue.enqueue(url);
+    }
+
     function buildCard(resp) {
       var card = document.createElement('div');
       card.className = 'response-card';
@@ -2039,6 +2073,9 @@ create policy "delete videos"
         });
       }
       card.innerHTML = html;
+
+      // Auto-convert + persist .webm → .mp4 in the background (silent).
+      if (vUrl) autoPersistMp4(resp, vUrl);
 
       // Background MP4 conversion queue handler
       var dlBtn = card.querySelector('.btn-download-video');
@@ -3507,9 +3544,39 @@ create policy "delete videos"
 
         uploadStatus.textContent = 'Done! Thank you for participating.';
         uploadStatus.className = 'upload-status success';
+
+        // Background MP4 conversion — doesn't block the Done screen.
+        // If respondent closes the tab, WebM remains (researcher can convert manually).
+        backgroundConvert(blob, respId, videoPath);
       } catch(err) {
         uploadStatus.textContent = 'Error: ' + err.message;
         uploadStatus.className = 'upload-status error';
+      }
+    }
+
+    async function backgroundConvert(webmBlob, respId, webmPath) {
+      var convertStatus = $('convertStatus');
+      if (!convertStatus) return;
+      convertStatus.textContent = '📦 Finalizing format… you may close this tab anytime.';
+      try {
+        var start = Date.now();
+        var timer = setInterval(function() {
+          var sec = Math.round((Date.now() - start) / 1000);
+          convertStatus.textContent = '📦 Finalizing format (' + sec + 's)… you may close this tab.';
+        }, 1000);
+        var mp4Blob;
+        try { mp4Blob = await convertToMp4(webmBlob, null); }
+        finally { clearInterval(timer); }
+
+        var mp4Path = webmPath.replace(/\.webm$/, '.mp4');
+        convertStatus.textContent = '📦 Uploading final format…';
+        await R2.upload(mp4Path, mp4Blob);
+        await sb.patch('/rest/v1/responses?id=eq.' + respId, { video_path: mp4Path });
+        try { await R2.delete(webmPath); } catch(e) {}
+        convertStatus.textContent = '✓ Final format saved.';
+      } catch(e) {
+        // Silent fail — WebM remains in R2/DB, researcher can convert manually.
+        convertStatus.textContent = '';
       }
     }
   }
