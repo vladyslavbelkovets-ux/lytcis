@@ -138,7 +138,7 @@
     text-decoration: none; white-space: nowrap; line-height: 1;
   }
   .rc-actions .btn-download-video, .rc-actions .btn-download-audio {
-    min-width: 190px; justify-content: center;
+    min-width: 132px; justify-content: center;
   }
   .btn-download-video { color: #333; background: #f0f0f0; border-color: #e0e0e0; }
   .btn-download-video:hover { background: #e4e4e4; }
@@ -2010,8 +2010,8 @@ create policy "delete videos"
       var html = '<div class="rc-date">' + date + deviceBadge + '</div>';
       if (vUrl) html += '<video controls preload="metadata" src="' + vUrl + '"></video>';
       html += '<div class="rc-actions">';
-      if (vUrl) html += '<button class="btn-download-video" data-url="' + vUrl + '" data-name="' + baseName + '.webm">⬇ Завантажити WebM</button>';
-      if (vUrl) html += '<button class="btn-download-video btn-download-audio" data-url="' + vUrl + '" data-name="' + baseName + '.mp3">⬇ Завантажити MP3</button>';
+      if (vUrl) html += '<button class="btn-download-video" data-url="' + vUrl + '" data-name="' + baseName + '.webm">⬇ WEBM</button>';
+      if (vUrl) html += '<button class="btn-download-video btn-download-audio" data-url="' + vUrl + '" data-name="' + baseName + '.mp3">⬇ MP3</button>';
       html += '<button class="btn-delete-response" data-resp-id="' + resp.id + '" data-video-path="' + (resp.video_path || '') + '">🗑 Видалити</button>';
       html += '</div>';
       if (vUrl) {
@@ -2043,7 +2043,7 @@ create policy "delete videos"
           } catch(e) {
             window.open(dlBtn.dataset.url, '_blank');
           }
-          dlBtn.textContent = '⬇ Завантажити WebM';
+          dlBtn.textContent = '⬇ WEBM';
         };
       })();
 
@@ -2108,7 +2108,7 @@ create policy "delete videos"
             showToast('Не вдалося створити MP3: ' + e.message, 'error');
           } finally {
             mp3Btn.disabled = false;
-            mp3Btn.textContent = '⬇ Завантажити MP3';
+            mp3Btn.textContent = '⬇ MP3';
             _activeMp3Task = null;
           }
         };
