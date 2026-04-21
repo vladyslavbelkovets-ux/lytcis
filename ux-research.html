@@ -1242,7 +1242,7 @@ create policy "delete videos"
     var cf = window.FFmpeg;
     _ffmpegInst = cf.createFFmpeg({
       corePath: 'https://unpkg.com/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js',
-      log: false
+      log: true
     });
     await _ffmpegInst.load();
     return _ffmpegInst;
@@ -1250,11 +1250,26 @@ create policy "delete videos"
   async function convertToMp4(blob, onProgress) {
     var ff = await loadFFmpeg();
     if (onProgress) ff.setProgress(function(p) { onProgress(Math.round((p.ratio || 0) * 100)); });
-    var inExt = blob.type.includes('mp4') ? 'mp4' : 'webm';
-    ff.FS('writeFile', 'in.' + inExt, await window.FFmpeg.fetchFile(blob));
-    await ff.run('-i', 'in.' + inExt, '-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '26', '-c:a', 'aac', '-b:a', '128k', '-movflags', 'faststart', 'out.mp4');
-    var data = ff.FS('readFile', 'out.mp4');
-    try { ff.FS('unlink', 'in.' + inExt); ff.FS('unlink', 'out.mp4'); } catch(e) {}
+    // Collect logs for error reporting
+    var logs = [];
+    ff.setLogger(function(l) { if (l.message) logs.push(l.message); });
+    // Clean up any leftover files from previous runs
+    ['in.webm', 'in.mp4', 'out.mp4'].forEach(function(f) { try { ff.FS('unlink', f); } catch(e) {} });
+    var inExt = (blob.type || '').includes('mp4') ? 'mp4' : 'webm';
+    var inFile = 'in.' + inExt;
+    ff.FS('writeFile', inFile, await window.FFmpeg.fetchFile(blob));
+    try {
+      await ff.run('-i', inFile, '-c:v', 'libx264', '-c:a', 'aac', 'out.mp4');
+    } catch(e) {
+      throw new Error('FFmpeg run failed: ' + (e.message || e) + '\n' + logs.slice(-6).join('\n'));
+    }
+    var data;
+    try {
+      data = ff.FS('readFile', 'out.mp4');
+    } catch(e) {
+      throw new Error('out.mp4 не створено.\n' + logs.slice(-6).join('\n'));
+    }
+    try { ff.FS('unlink', inFile); ff.FS('unlink', 'out.mp4'); } catch(e) {}
     return new Blob([data.buffer], { type: 'video/mp4' });
   }
 
