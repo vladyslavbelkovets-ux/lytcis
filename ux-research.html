@@ -1230,102 +1230,9 @@ create policy "delete videos"
   </div>
 </div>
 
-<script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
 <script>
 (function() {
   'use strict';
-
-  // ===== FFMPEG WebM→MP4 CONVERTER =====
-  var _ffmpegInst = null;
-  async function loadFFmpeg() {
-    if (_ffmpegInst && _ffmpegInst.isLoaded()) return _ffmpegInst;
-    var cf = window.FFmpeg;
-    // Use single-threaded core when SharedArrayBuffer is unavailable
-    var hasSAB = typeof SharedArrayBuffer !== 'undefined';
-    var corePath = hasSAB
-      ? 'https://unpkg.com/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js'
-      : 'https://unpkg.com/@ffmpeg/core-st@0.11.0/dist/ffmpeg-core.js';
-    _ffmpegInst = cf.createFFmpeg({ corePath: corePath, log: false });
-    await _ffmpegInst.load();
-    return _ffmpegInst;
-  }
-  async function convertToMp4(blob, onProgress) {
-    var ff = await loadFFmpeg();
-    if (onProgress) ff.setProgress(function(p) { onProgress(Math.round((p.ratio || 0) * 100)); });
-    // Collect logs for error reporting
-    var logs = [];
-    ff.setLogger(function(l) { if (l.message) logs.push(l.message); });
-    // Clean up any leftover files from previous runs
-    ['in.webm', 'in.mp4', 'out.mp4'].forEach(function(f) { try { ff.FS('unlink', f); } catch(e) {} });
-    var inExt = (blob.type || '').includes('mp4') ? 'mp4' : 'webm';
-    var inFile = 'in.' + inExt;
-    ff.FS('writeFile', inFile, await window.FFmpeg.fetchFile(blob));
-    try {
-      await ff.run('-i', inFile, '-c:v', 'libx264', '-c:a', 'aac', 'out.mp4');
-    } catch(e) {
-      throw new Error('FFmpeg run failed: ' + (e.message || e) + '\n' + logs.slice(-6).join('\n'));
-    }
-    var data;
-    try {
-      data = ff.FS('readFile', 'out.mp4');
-    } catch(e) {
-      throw new Error('out.mp4 не створено.\n' + logs.slice(-6).join('\n'));
-    }
-    try { ff.FS('unlink', inFile); ff.FS('unlink', 'out.mp4'); } catch(e) {}
-    return new Blob([data.buffer], { type: 'video/mp4' });
-  }
-
-  // ===== BACKGROUND MP4 CONVERSION QUEUE =====
-  // Allows multiple videos to be queued for conversion without blocking UI.
-  // One conversion runs at a time (FFmpeg.wasm is single-instance, CPU-bound).
-  var mp4Queue = {
-    q: [],          // pending urls
-    cache: {},      // url → Blob (converted MP4)
-    state: {},      // url → { status, startTime?, error? }
-    listeners: {},  // url → [callbacks]
-    busy: false,
-
-    subscribe: function(url, cb) {
-      (this.listeners[url] = this.listeners[url] || []).push(cb);
-      var s = this.state[url];
-      if (s) cb(s.status, s);
-    },
-    unsubscribe: function(url, cb) {
-      var arr = this.listeners[url]; if (!arr) return;
-      var i = arr.indexOf(cb); if (i !== -1) arr.splice(i, 1);
-    },
-    _emit: function(url, status, extra) {
-      this.state[url] = Object.assign({}, this.state[url] || {}, { status: status }, extra || {});
-      var st = this.state[url];
-      (this.listeners[url] || []).slice().forEach(function(cb) { try { cb(status, st); } catch(e) {} });
-    },
-    enqueue: function(url) {
-      var s = this.state[url];
-      if (s && (s.status === 'queued' || s.status === 'fetching' || s.status === 'converting' || s.status === 'ready')) return;
-      if (this.q.indexOf(url) === -1) this.q.push(url);
-      this._emit(url, 'queued');
-      this._process();
-    },
-    _process: async function() {
-      if (this.busy || !this.q.length) return;
-      this.busy = true;
-      var url = this.q.shift();
-      try {
-        this._emit(url, 'fetching');
-        var r = await fetch(url);
-        if (!r.ok) throw new Error('HTTP ' + r.status);
-        var blob = await r.blob();
-        this._emit(url, 'converting', { startTime: Date.now() });
-        var mp4 = await convertToMp4(blob, null);
-        this.cache[url] = mp4;
-        this._emit(url, 'ready', { blob: mp4 });
-      } catch(e) {
-        this._emit(url, 'error', { error: e });
-      }
-      this.busy = false;
-      this._process();
-    }
-  };
 
   // ===== SUPABASE HELPERS =====
   var SB = {
@@ -2026,43 +1933,16 @@ create policy "delete videos"
       });
     }
 
-    // Auto-persist: when a .webm response gets converted (by any means),
-    // upload the MP4 to R2, update DB, delete the old WebM. Silent on failure.
-    function autoPersistMp4(resp, url) {
-      if (!resp || !resp.video_path || !/\.webm$/.test(resp.video_path)) return;
-      mp4Queue.subscribe(url, async function(status, s) {
-        if (status !== 'ready' || !s || !s.blob) return;
-        if (mp4Queue.state[url] && mp4Queue.state[url].persisted) return;
-        mp4Queue.state[url].persisted = true;  // claim
-        try {
-          var webmPath = resp.video_path;
-          var mp4Path = webmPath.replace(/\.webm$/, '.mp4');
-          await R2.upload(mp4Path, s.blob);
-          var hdr = SB.headers();
-          await fetch(SB.url + '/rest/v1/responses?id=eq.' + resp.id, {
-            method: 'PATCH', headers: hdr, body: JSON.stringify({ video_path: mp4Path })
-          });
-          try { await R2.delete(webmPath); } catch(e) {}
-          resp.video_path = mp4Path;  // keep in-memory record fresh
-        } catch(e) {
-          mp4Queue.state[url].persisted = false;  // allow retry later
-        }
-      });
-      // Silently enqueue for background conversion
-      mp4Queue.enqueue(url);
-    }
-
     function buildCard(resp) {
       var card = document.createElement('div');
       card.className = 'response-card';
       var date = new Date(resp.created_at).toLocaleString('uk-UA', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
       var deviceBadge = resp.device ? '<span style="display:inline-block;margin-left:8px;font-size:11px;font-weight:600;padding:2px 7px;border-radius:4px;background:' + (resp.device === 'mobile' ? '#e3f2fd;color:#1565c0' : '#f3e5f5;color:#6a1b9a') + '">' + (resp.device === 'mobile' ? '📱 Mobile' : '🖥️ Desktop') + '</span>' : '';
       var vUrl = resp.video_path ? R2.videoUrl(resp.video_path) : null;
-      var ext = resp.video_path ? (resp.video_path.split('.').pop() || 'webm') : 'webm';
       var html = '<div class="rc-date">' + date + deviceBadge + '</div>';
       if (vUrl) html += '<video controls preload="metadata" src="' + vUrl + '"></video>';
       html += '<div class="rc-actions">';
-      if (vUrl) html += '<button class="btn-download-video" data-url="' + vUrl + '" data-name="recording-' + date.replace(/[^0-9a-zA-Zа-яА-ЯіІїЇєЄґҐ]/g, '_') + '">⬇ Завантажити MP4</button>';
+      if (vUrl) html += '<button class="btn-download-video" data-url="' + vUrl + '" data-name="recording-' + date.replace(/[^0-9a-zA-Zа-яА-ЯіІїЇєЄґҐ]/g, '_') + '.webm">⬇ Завантажити WebM</button>';
       html += '<button class="btn-delete-response" data-resp-id="' + resp.id + '" data-video-path="' + (resp.video_path || '') + '">🗑 Видалити</button>';
       html += '</div>';
       if (resp.answers && Object.keys(resp.answers).length) {
@@ -2073,85 +1953,22 @@ create policy "delete videos"
       }
       card.innerHTML = html;
 
-      // Auto-convert + persist .webm → .mp4 in the background (silent).
-      if (vUrl) autoPersistMp4(resp, vUrl);
-
-      // Background MP4 conversion queue handler
       var dlBtn = card.querySelector('.btn-download-video');
       if (dlBtn) (function() {
-        var url = dlBtn.dataset.url;
-        var fname = (dlBtn.dataset.name || 'recording') + '.mp4';
-        var webmFname = (dlBtn.dataset.name || 'recording') + '.webm';
-        var convTimer = null;
-        var autoSaveWhenReady = false;
-
-        // WebM button — always visible until MP4 is ready
-        var webmBtn = document.createElement('button');
-        webmBtn.className = 'btn-download-video';
-        webmBtn.style.cssText = 'font-size:12px;padding:5px 10px;color:#888;background:#f8f8f8;border-color:#ddd;';
-        webmBtn.textContent = '⬇ WebM';
-        webmBtn.title = 'Завантажити оригінал (WebM)';
-        dlBtn.after(webmBtn);
-        webmBtn.onclick = function() { window.open(url, '_blank'); };
-
-        function showWebmBtn(visible) { webmBtn.style.display = visible ? '' : 'none'; }
-
-        function saveMp4(blob) {
-          var a = document.createElement('a');
-          a.href = URL.createObjectURL(blob);
-          a.download = fname; a.click();
-          setTimeout(function() { URL.revokeObjectURL(a.href); }, 5000);
-        }
-        function stopTimer() { if (convTimer) { clearInterval(convTimer); convTimer = null; } }
-
-        function onState(status, s) {
-          stopTimer();
-          if (status === 'queued') { dlBtn.textContent = '⏳ В черзі…'; showWebmBtn(true); }
-          else if (status === 'fetching') { dlBtn.textContent = '⏳ Завантаження…'; showWebmBtn(true); }
-          else if (status === 'converting') {
-            showWebmBtn(true);  // keep WebM visible during conversion
-            var start = (s && s.startTime) || Date.now();
-            var tick = function() {
-              var sec = Math.round((Date.now() - start) / 1000);
-              dlBtn.textContent = '⏳ Конвертація ' + sec + 'с…';
-            };
-            tick(); convTimer = setInterval(tick, 1000);
+        dlBtn.onclick = async function() {
+          dlBtn.textContent = '⏳ Завантаження…';
+          try {
+            var r = await fetch(dlBtn.dataset.url);
+            var blob = await r.blob();
+            var a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = dlBtn.dataset.name;
+            a.click();
+            setTimeout(function() { URL.revokeObjectURL(a.href); }, 5000);
+          } catch(e) {
+            window.open(dlBtn.dataset.url, '_blank');
           }
-          else if (status === 'ready') {
-            showWebmBtn(false);
-            dlBtn.textContent = '⬇ Зберегти MP4';
-            if (autoSaveWhenReady) {
-              autoSaveWhenReady = false;
-              saveMp4(s.blob);
-            }
-          }
-          else if (status === 'error') {
-            showWebmBtn(false);
-            dlBtn.textContent = '⚠ Повторити';
-            if (autoSaveWhenReady) {
-              autoSaveWhenReady = false;
-              alert('Помилка конвертації: ' + (s.error && s.error.message) + '\nВідео відкриється у новій вкладці (WebM).');
-              window.open(url, '_blank');
-            }
-          }
-        }
-
-        mp4Queue.subscribe(url, onState);
-
-        dlBtn.onclick = function() {
-          var s = mp4Queue.state[url];
-          if (s && s.status === 'ready' && mp4Queue.cache[url]) {
-            saveMp4(mp4Queue.cache[url]);
-            return;
-          }
-          if (s && (s.status === 'queued' || s.status === 'fetching' || s.status === 'converting')) {
-            autoSaveWhenReady = true;
-            return;
-          }
-          // Start (or retry after error)
-          autoSaveWhenReady = true;
-          if (s && s.status === 'error') delete mp4Queue.state[url];
-          mp4Queue.enqueue(url);
+          dlBtn.textContent = '⬇ Завантажити WebM';
         };
       })();
 
