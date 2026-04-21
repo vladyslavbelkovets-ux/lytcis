@@ -1241,7 +1241,7 @@ create policy "delete videos"
     if (_ffmpegInst && _ffmpegInst.isLoaded()) return _ffmpegInst;
     var cf = window.FFmpeg;
     _ffmpegInst = cf.createFFmpeg({
-      corePath: 'https://unpkg.com/@ffmpeg/core-st@0.11.1/dist/ffmpeg-core.js',
+      corePath: 'https://unpkg.com/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js',
       log: false
     });
     await _ffmpegInst.load();
