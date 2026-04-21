@@ -1240,10 +1240,12 @@ create policy "delete videos"
   async function loadFFmpeg() {
     if (_ffmpegInst && _ffmpegInst.isLoaded()) return _ffmpegInst;
     var cf = window.FFmpeg;
-    _ffmpegInst = cf.createFFmpeg({
-      corePath: 'https://unpkg.com/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js',
-      log: true
-    });
+    // Use single-threaded core when SharedArrayBuffer is unavailable
+    var hasSAB = typeof SharedArrayBuffer !== 'undefined';
+    var corePath = hasSAB
+      ? 'https://unpkg.com/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js'
+      : 'https://unpkg.com/@ffmpeg/core-st@0.11.0/dist/ffmpeg-core.js';
+    _ffmpegInst = cf.createFFmpeg({ corePath: corePath, log: false });
     await _ffmpegInst.load();
     return _ffmpegInst;
   }
@@ -1997,9 +1999,18 @@ create policy "delete videos"
           var blob = await r.blob();
           var sizeMb = (blob.size / 1024 / 1024).toFixed(0);
           dlBtn.textContent = '⏳ Завантаження FFmpeg…';
-          var mp4 = await convertToMp4(blob, function(pct) {
-            dlBtn.textContent = '⏳ Конвертація ' + pct + '%… (' + sizeMb + ' MB)';
-          });
+          // Show elapsed time — WebM progress ratio is unreliable
+          var convStart = Date.now();
+          var convTimer = setInterval(function() {
+            var sec = Math.round((Date.now() - convStart) / 1000);
+            dlBtn.textContent = '⏳ Конвертація ' + sec + 'с… (' + sizeMb + ' MB)';
+          }, 1000);
+          var mp4;
+          try {
+            mp4 = await convertToMp4(blob, null);
+          } finally {
+            clearInterval(convTimer);
+          }
           var fname = (dlBtn.dataset.name || 'recording') + '.mp4';
           var a = document.createElement('a'); a.href = URL.createObjectURL(mp4);
           a.download = fname; a.click();
