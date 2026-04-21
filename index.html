@@ -1275,6 +1275,58 @@ create policy "delete videos"
     return new Blob([data.buffer], { type: 'video/mp4' });
   }
 
+  // ===== BACKGROUND MP4 CONVERSION QUEUE =====
+  // Allows multiple videos to be queued for conversion without blocking UI.
+  // One conversion runs at a time (FFmpeg.wasm is single-instance, CPU-bound).
+  var mp4Queue = {
+    q: [],          // pending urls
+    cache: {},      // url → Blob (converted MP4)
+    state: {},      // url → { status, startTime?, error? }
+    listeners: {},  // url → [callbacks]
+    busy: false,
+
+    subscribe: function(url, cb) {
+      (this.listeners[url] = this.listeners[url] || []).push(cb);
+      var s = this.state[url];
+      if (s) cb(s.status, s);
+    },
+    unsubscribe: function(url, cb) {
+      var arr = this.listeners[url]; if (!arr) return;
+      var i = arr.indexOf(cb); if (i !== -1) arr.splice(i, 1);
+    },
+    _emit: function(url, status, extra) {
+      this.state[url] = Object.assign({}, this.state[url] || {}, { status: status }, extra || {});
+      var st = this.state[url];
+      (this.listeners[url] || []).slice().forEach(function(cb) { try { cb(status, st); } catch(e) {} });
+    },
+    enqueue: function(url) {
+      var s = this.state[url];
+      if (s && (s.status === 'queued' || s.status === 'fetching' || s.status === 'converting' || s.status === 'ready')) return;
+      if (this.q.indexOf(url) === -1) this.q.push(url);
+      this._emit(url, 'queued');
+      this._process();
+    },
+    _process: async function() {
+      if (this.busy || !this.q.length) return;
+      this.busy = true;
+      var url = this.q.shift();
+      try {
+        this._emit(url, 'fetching');
+        var r = await fetch(url);
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        var blob = await r.blob();
+        this._emit(url, 'converting', { startTime: Date.now() });
+        var mp4 = await convertToMp4(blob, null);
+        this.cache[url] = mp4;
+        this._emit(url, 'ready', { blob: mp4 });
+      } catch(e) {
+        this._emit(url, 'error', { error: e });
+      }
+      this.busy = false;
+      this._process();
+    }
+  };
+
   // ===== SUPABASE HELPERS =====
   var SB = {
     url: null, key: null,
@@ -1988,40 +2040,70 @@ create policy "delete videos"
       }
       card.innerHTML = html;
 
-      // Download + convert handler
+      // Background MP4 conversion queue handler
       var dlBtn = card.querySelector('.btn-download-video');
-      if (dlBtn) dlBtn.onclick = async function() {
-        dlBtn.disabled = true;
-        try {
-          dlBtn.textContent = '⏳ Завантаження відео…';
-          var r = await fetch(dlBtn.dataset.url);
-          if (!r.ok) throw new Error('HTTP ' + r.status);
-          var blob = await r.blob();
-          var sizeMb = (blob.size / 1024 / 1024).toFixed(0);
-          dlBtn.textContent = '⏳ Завантаження FFmpeg…';
-          // Show elapsed time — WebM progress ratio is unreliable
-          var convStart = Date.now();
-          var convTimer = setInterval(function() {
-            var sec = Math.round((Date.now() - convStart) / 1000);
-            dlBtn.textContent = '⏳ Конвертація ' + sec + 'с… (' + sizeMb + ' MB)';
-          }, 1000);
-          var mp4;
-          try {
-            mp4 = await convertToMp4(blob, null);
-          } finally {
-            clearInterval(convTimer);
-          }
-          var fname = (dlBtn.dataset.name || 'recording') + '.mp4';
-          var a = document.createElement('a'); a.href = URL.createObjectURL(mp4);
+      if (dlBtn) (function() {
+        var url = dlBtn.dataset.url;
+        var fname = (dlBtn.dataset.name || 'recording') + '.mp4';
+        var convTimer = null;
+        var autoSaveWhenReady = false;
+
+        function saveMp4(blob) {
+          var a = document.createElement('a');
+          a.href = URL.createObjectURL(blob);
           a.download = fname; a.click();
           setTimeout(function() { URL.revokeObjectURL(a.href); }, 5000);
-        } catch(e) {
-          alert('Помилка: ' + e.message + '\nВідео відкриється у новій вкладці (WebM).');
-          window.open(dlBtn.dataset.url, '_blank');
         }
-        dlBtn.disabled = false;
-        dlBtn.textContent = '⬇ Завантажити MP4';
-      };
+        function stopTimer() { if (convTimer) { clearInterval(convTimer); convTimer = null; } }
+
+        function onState(status, s) {
+          stopTimer();
+          if (status === 'queued') dlBtn.textContent = '⏳ В черзі…';
+          else if (status === 'fetching') dlBtn.textContent = '⏳ Завантаження відео…';
+          else if (status === 'converting') {
+            var start = (s && s.startTime) || Date.now();
+            var tick = function() {
+              var sec = Math.round((Date.now() - start) / 1000);
+              dlBtn.textContent = '⏳ Конвертація ' + sec + 'с…';
+            };
+            tick(); convTimer = setInterval(tick, 1000);
+          }
+          else if (status === 'ready') {
+            dlBtn.textContent = '⬇ Зберегти MP4';
+            if (autoSaveWhenReady) {
+              autoSaveWhenReady = false;
+              saveMp4(s.blob);
+            }
+          }
+          else if (status === 'error') {
+            dlBtn.textContent = '⚠ Повторити';
+            if (autoSaveWhenReady) {
+              autoSaveWhenReady = false;
+              alert('Помилка конвертації: ' + (s.error && s.error.message) + '\nВідео відкриється у новій вкладці (WebM).');
+              window.open(url, '_blank');
+            }
+          }
+        }
+
+        mp4Queue.subscribe(url, onState);
+
+        dlBtn.onclick = function() {
+          var s = mp4Queue.state[url];
+          if (s && s.status === 'ready' && mp4Queue.cache[url]) {
+            saveMp4(mp4Queue.cache[url]);
+            return;
+          }
+          if (s && (s.status === 'queued' || s.status === 'fetching' || s.status === 'converting')) {
+            // already in progress — set flag so when it finishes it auto-saves
+            autoSaveWhenReady = true;
+            return;
+          }
+          // Start (or retry after error)
+          autoSaveWhenReady = true;
+          if (s && s.status === 'error') delete mp4Queue.state[url];
+          mp4Queue.enqueue(url);
+        };
+      })();
 
       // Delete handler
       var delBtn = card.querySelector('.btn-delete-response');
