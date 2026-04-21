@@ -57,6 +57,13 @@
     font-size: 14px; font-family: inherit; background: #fff; transition: border-color .15s;
   }
   .field input:focus, .field textarea:focus { outline: none; border-color: #4a90d9; }
+  .limit-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .limit-field { display: flex; flex-direction: column; gap: 6px; }
+  .limit-field-label {
+    display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700;
+    color: #555; padding: 0 2px;
+  }
+  .limit-legacy-hint { display: none; color: #8a6d3b !important; }
 
   .empty-state { text-align: center; padding: 60px 20px; color: #888; }
   .empty-state p { margin-bottom: 16px; font-size: 14px; }
@@ -766,6 +773,7 @@
 
   /* ===== MOBILE RESPONDENT ===== */
   @media (max-width: 600px) {
+    .limit-grid { grid-template-columns: 1fr; }
     /* Welcome / Done / Closed cards */
     .welcome-card, .closed-card, .done-card {
       padding: 28px 20px; width: 95%; border-radius: 14px;
@@ -1062,8 +1070,18 @@ create policy "delete videos"
       </div>
       <div class="field" style="margin-bottom:0;">
         <label>Ліміт респондентів</label>
-        <div class="hint">Залиште порожнім для необмеженого доступу.</div>
-        <input type="number" id="respondentLimit" min="1" placeholder="Напр. 10">
+        <div class="hint" id="respondentLimitHint">Можна задати окремі ліміти для desktop і mobile. Порожнє поле = без ліміту.</div>
+        <div class="limit-grid">
+          <div class="limit-field" data-limit-device="desktop">
+            <div class="limit-field-label">🖥 Desktop</div>
+            <input type="number" id="respondentLimitDesktop" min="1" placeholder="Напр. 10">
+          </div>
+          <div class="limit-field" data-limit-device="mobile">
+            <div class="limit-field-label">📱 Mobile</div>
+            <input type="number" id="respondentLimitMobile" min="1" placeholder="Напр. 10">
+          </div>
+        </div>
+        <div class="hint limit-legacy-hint" id="respondentLegacyLimitHint"></div>
       </div>
     </div>
 
@@ -1581,6 +1599,122 @@ create policy "delete videos"
     return JSON.parse(decodeURIComponent(escape(atob(str))));
   }
 
+  function parsePositiveInt(value) {
+    var num = parseInt(value, 10);
+    return isFinite(num) && num > 0 ? num : null;
+  }
+
+  function normalizeDevice(value) {
+    return value === 'desktop' || value === 'mobile' || value === 'both' ? value : null;
+  }
+
+  function inferDeviceFromName(name) {
+    name = name || '';
+    if (name.indexOf('🖥📱 ') === 0) return 'both';
+    if (name.indexOf('📱 ') === 0) return 'mobile';
+    if (name.indexOf('🖥 ') === 0) return 'desktop';
+    return null;
+  }
+
+  function getTestConfig(test) {
+    var rawTasks = test && test.tasks;
+    var isLegacyArray = Array.isArray(rawTasks);
+    var meta = isLegacyArray ? {} : (rawTasks || {});
+    var rawLimits = meta.respondent_limits || {};
+    var desktopLimit = parsePositiveInt(rawLimits.desktop);
+    var mobileLimit = parsePositiveInt(rawLimits.mobile);
+    return {
+      tasks: isLegacyArray ? rawTasks : (meta.tasks || []),
+      screening: isLegacyArray ? [] : (meta.screening || []),
+      device: normalizeDevice(meta.device) || inferDeviceFromName(test && test.name) || 'desktop',
+      respondentLimits: { desktop: desktopLimit, mobile: mobileLimit },
+      hasPerDeviceLimits: desktopLimit !== null || mobileLimit !== null,
+      legacyLimit: parsePositiveInt(test && test.respondent_limit)
+    };
+  }
+
+  function buildTasksData(tasks, screening, device, respondentLimits) {
+    var payload = {
+      device: normalizeDevice(device) || 'desktop',
+      tasks: tasks || []
+    };
+    if (screening && screening.length) payload.screening = screening;
+    var desktopLimit = respondentLimits ? parsePositiveInt(respondentLimits.desktop) : null;
+    var mobileLimit = respondentLimits ? parsePositiveInt(respondentLimits.mobile) : null;
+    if (desktopLimit !== null || mobileLimit !== null) {
+      payload.respondent_limits = { desktop: desktopLimit, mobile: mobileLimit };
+    }
+    return payload;
+  }
+
+  function formatDeviceLimit(deviceKey, limit, shortMode) {
+    var icon = deviceKey === 'mobile' ? '📱' : '🖥';
+    return icon + ' ' + (limit !== null ? limit : (shortMode ? '∞' : 'без ліміту'));
+  }
+
+  function formatRespondentLimitText(test, opts) {
+    var cfg = getTestConfig(test);
+    var shortMode = !!(opts && opts.short);
+    if (cfg.hasPerDeviceLimits) {
+      var parts = [];
+      if (cfg.device !== 'mobile') parts.push(formatDeviceLimit('desktop', cfg.respondentLimits.desktop, shortMode));
+      if (cfg.device !== 'desktop') parts.push(formatDeviceLimit('mobile', cfg.respondentLimits.mobile, shortMode));
+      if (!parts.length) return shortMode ? '' : 'Без ліміту';
+      return shortMode ? (' · ' + parts.join(' · ')) : ('Ліміти: ' + parts.join(' · '));
+    }
+    if (cfg.legacyLimit !== null) {
+      return shortMode ? (' · ліміт: ' + cfg.legacyLimit) : ('Ліміт: ' + cfg.legacyLimit + ' респондентів');
+    }
+    return shortMode ? '' : 'Без ліміту';
+  }
+
+  function readRespondentLimitInputs() {
+    return {
+      desktop: parsePositiveInt(document.getElementById('respondentLimitDesktop').value),
+      mobile: parsePositiveInt(document.getElementById('respondentLimitMobile').value)
+    };
+  }
+
+  function fillRespondentLimitInputs(limitConfig) {
+    document.getElementById('respondentLimitDesktop').value = limitConfig && limitConfig.desktop !== null ? limitConfig.desktop : '';
+    document.getElementById('respondentLimitMobile').value = limitConfig && limitConfig.mobile !== null ? limitConfig.mobile : '';
+  }
+
+  function updateRespondentLimitUI() {
+    var desktopField = document.querySelector('[data-limit-device="desktop"]');
+    var mobileField = document.querySelector('[data-limit-device="mobile"]');
+    var hint = document.getElementById('respondentLimitHint');
+    var legacyHint = document.getElementById('respondentLegacyLimitHint');
+    if (!desktopField || !mobileField || !hint || !legacyHint) return;
+
+    desktopField.style.display = currentDevice === 'mobile' ? 'none' : '';
+    mobileField.style.display = currentDevice === 'desktop' ? 'none' : '';
+
+    if (currentDevice === 'both') {
+      hint.textContent = 'Можна задати окремі ліміти для desktop і mobile. Порожнє поле = без ліміту.';
+    } else if (currentDevice === 'mobile') {
+      hint.textContent = 'Ліміт тільки для mobile респондентів. Порожнє поле = без ліміту.';
+    } else {
+      hint.textContent = 'Ліміт тільки для desktop респондентів. Порожнє поле = без ліміту.';
+    }
+
+    if (currentLegacyCombinedLimit && currentDevice === 'both') {
+      legacyHint.style.display = 'block';
+      legacyHint.textContent = 'У цього тесту зараз є спільний ліміт ' + currentLegacyCombinedLimit + ' на всі пристрої. Якщо задаси окремі desktop/mobile ліміти, він буде замінений.';
+    } else {
+      legacyHint.style.display = 'none';
+      legacyHint.textContent = '';
+    }
+  }
+
+  function setCreateDevice(device) {
+    currentDevice = normalizeDevice(device) || 'desktop';
+    document.querySelectorAll('#deviceToggle button').forEach(function(btn) {
+      btn.classList.toggle('active', btn.dataset.device === currentDevice);
+    });
+    updateRespondentLimitUI();
+  }
+
   // ===== TOAST =====
   function showToast(msg, type) {
     var c = document.getElementById('toastContainer');
@@ -1818,16 +1952,17 @@ create policy "delete videos"
       tests.forEach(function(test) {
         var count = countMap[test.id] || 0;
         var isScreenshot = test.url === '__screenshots__';
+        var testConfig = getTestConfig(test);
         var date = new Date(test.created_at).toLocaleDateString('uk-UA', { day: 'numeric', month: 'long', year: 'numeric' });
         var card = document.createElement('div');
         card.className = 'test-card';
         var typeLabel = isScreenshot ? '🖼 Скріншоти' : esc(test.url);
-        var platform = test.name && test.name.startsWith('🖥📱') ? '🖥📱 Desktop + Mobile' : test.name && test.name.startsWith('📱') ? '📱 Mobile' : '🖥 Desktop';
+        var platform = testConfig.device === 'both' ? '🖥📱 Desktop + Mobile' : testConfig.device === 'mobile' ? '📱 Mobile' : '🖥 Desktop';
         card.innerHTML =
           '<div class="tc-info">' +
             '<div class="tc-name">' + esc(test.name || 'Без назви') + '</div>' +
             '<div class="tc-url">' + typeLabel + ' · ' + platform + '</div>' +
-            '<div class="tc-meta">' + date + (test.respondent_limit ? ' · ліміт: ' + test.respondent_limit : '') + '</div>' +
+            '<div class="tc-meta">' + date + formatRespondentLimitText(test, { short: true }) + '</div>' +
           '</div>' +
           '<div class="tc-count">' + count + ' відп.</div>';
         card.addEventListener('click', function() { openTestDetail(test, count); });
@@ -1857,17 +1992,12 @@ create policy "delete videos"
     document.getElementById('detailName').textContent = test.name || 'Без назви';
     var isScreenshot = test.url === '__screenshots__';
     document.getElementById('detailUrl').textContent = isScreenshot ? '🖼 Тест скріншотів' : test.url;
-    var limitText = test.respondent_limit ? 'Ліміт: ' + test.respondent_limit + ' респондентів' : 'Без ліміту';
-    document.getElementById('detailLimit').textContent = limitText;
+    document.getElementById('detailLimit').textContent = formatRespondentLimitText(test);
 
     // Parse wrapped tasks format
-    var rawTasks = test.tasks;
-    var actualTasks, detailScreening;
-    if (Array.isArray(rawTasks)) {
-      actualTasks = rawTasks; detailScreening = [];
-    } else {
-      actualTasks = rawTasks.tasks || []; detailScreening = rawTasks.screening || [];
-    }
+    var testConfig = getTestConfig(test);
+    var actualTasks = testConfig.tasks;
+    var detailScreening = testConfig.screening;
 
     function renderDetailTaskItem(typeClass, typeLabel, text, index, extraHtml, hidden, customClass) {
       var classes = 'detail-task-item';
@@ -1974,7 +2104,7 @@ create policy "delete videos"
     // Copy link
     document.getElementById('detailCopyLink').onclick = function() {
       var btn = this;
-      var cfg = { t: test.id, s: SB.url, k: SB.key };
+      var cfg = { t: test.id, s: SB.url, k: SB.key, d: testConfig.device };
       var link = location.origin + location.pathname + '#' + encodeConfig(cfg);
       navigator.clipboard.writeText(link).then(function() {
         btn.textContent = '✓ Скопійовано!';
@@ -2272,13 +2402,25 @@ create policy "delete videos"
       document.getElementById('testUrl').value = test.url;
     }
 
-    // Pre-fill respondent limit
-    document.getElementById('respondentLimit').value = test.respondent_limit || '';
+    // Pre-fill respondent limits + device
+    var testConfig = getTestConfig(test);
+    currentLegacyCombinedLimit = null;
+    if (testConfig.hasPerDeviceLimits) {
+      fillRespondentLimitInputs(testConfig.respondentLimits);
+    } else if (testConfig.legacyLimit !== null) {
+      fillRespondentLimitInputs({
+        desktop: testConfig.device === 'desktop' ? testConfig.legacyLimit : null,
+        mobile: testConfig.device === 'mobile' ? testConfig.legacyLimit : null
+      });
+      if (testConfig.device === 'both') currentLegacyCombinedLimit = testConfig.legacyLimit;
+    } else {
+      fillRespondentLimitInputs({ desktop: null, mobile: null });
+    }
+    setCreateDevice(testConfig.device);
 
     // Parse tasks format
-    var rawTasks = test.tasks;
-    var actualTasks = Array.isArray(rawTasks) ? rawTasks : (rawTasks.tasks || []);
-    var existingScreening = Array.isArray(rawTasks) ? [] : (rawTasks.screening || []);
+    var actualTasks = testConfig.tasks;
+    var existingScreening = testConfig.screening;
 
     // Pre-fill tasks (clear default empty row first)
     var taskList = document.getElementById('taskList');
@@ -2344,7 +2486,8 @@ create policy "delete videos"
       var btn = this;
       var name = document.getElementById('testName').value.trim();
       var url = document.getElementById('testUrl').value.trim();
-      var limitVal = parseInt(document.getElementById('respondentLimit').value) || null;
+      var respondentLimits = readRespondentLimitInputs();
+      var hasPerDeviceLimit = respondentLimits.desktop !== null || respondentLimits.mobile !== null;
 
       var items = taskList.querySelectorAll('.task-item'), tasks = [];
       for (var i = 0; i < items.length; i++) {
@@ -2374,11 +2517,14 @@ create policy "delete videos"
           }
         }
 
-        var tasksData = screening.length ? { screening: screening, tasks: tasks } : tasks;
+        var tasksData = buildTasksData(tasks, screening, currentDevice, respondentLimits);
         btn.textContent = 'Збереження…';
 
         var hdr = SB.headers({ 'Prefer': 'return=representation', 'Content-Type': 'application/json' });
-        var patchBody = { tasks: tasksData, respondent_limit: limitVal };
+        var patchBody = {
+          tasks: tasksData,
+          respondent_limit: (!hasPerDeviceLimit && currentDevice === 'both' && currentLegacyCombinedLimit) ? currentLegacyCombinedLimit : null
+        };
         if (name) patchBody.name = name;
         if (url) patchBody.url = url;
 
@@ -2432,6 +2578,7 @@ create policy "delete videos"
   // ===== CREATE TEST =====
   var currentTestMode = 'website';
   var currentDevice = 'desktop';
+  var currentLegacyCombinedLimit = null;
   var screenFiles = []; // [{file: File, questions: [{type, text}]}]
   var currentEditTest = null; // set when editing an existing test
   var _addTaskRow, _addScreeningQuestion, _addScreeningOption; // exposed from initCreatePage
@@ -2454,7 +2601,9 @@ create policy "delete videos"
     taskList.innerHTML = '';
     currentTestMode = 'website';
     currentDevice = 'desktop';
+    currentLegacyCombinedLimit = null;
     screenFiles = [];
+    fillRespondentLimitInputs({ desktop: null, mobile: null });
 
     // Reset screening toggle
     var stBtn = document.getElementById('screeningToggleBtn');
@@ -2478,14 +2627,9 @@ create policy "delete videos"
     // Device toggle
     var deviceBtns = document.querySelectorAll('#deviceToggle button');
     deviceBtns.forEach(function(btn) {
-      btn.addEventListener('click', function() {
-        deviceBtns.forEach(function(b) { b.classList.remove('active'); });
-        btn.classList.add('active');
-        currentDevice = btn.dataset.device;
-      });
+      btn.onclick = function() { setCreateDevice(btn.dataset.device); };
     });
-    deviceBtns.forEach(function(b) { b.classList.remove('active'); });
-    document.querySelector('#deviceToggle button[data-device="desktop"]').classList.add('active');
+    setCreateDevice('desktop');
 
     // Reset toggle UI
     toggleBtns.forEach(function(b) { b.classList.remove('active'); });
@@ -2901,7 +3045,7 @@ create policy "delete videos"
         }
         if (!tasks.length) { showToast('Додайте хоча б одне завдання', 'error'); return; }
 
-        var limitVal = parseInt(document.getElementById('respondentLimit').value) || null;
+        var respondentLimits = readRespondentLimitInputs();
         var screening = collectScreening();
 
         btn.disabled = true; btn.textContent = 'Створення…';
@@ -2920,12 +3064,12 @@ create policy "delete videos"
             }
           }
 
-          var tasksData = screening.length ? { screening: screening, tasks: tasks } : tasks;
+          var tasksData = buildTasksData(tasks, screening, currentDevice, respondentLimits);
           btn.textContent = 'Створення…';
           var deviceLabel = currentDevice === 'both' ? '🖥📱 ' : currentDevice === 'mobile' ? '📱 ' : '🖥 ';
           var result = await SB.post('/rest/v1/tests', {
             name: deviceLabel + (name || url.replace(/^https?:\/\//, '').slice(0, 40)),
-            url: url, tasks: tasksData, respondent_limit: limitVal
+            url: url, tasks: tasksData, respondent_limit: null
           });
           var test = result[0];
           var cfg = { t: test.id, s: SB.url, k: SB.key, d: currentDevice };
@@ -2961,7 +3105,7 @@ create policy "delete videos"
         });
         if (!valid) return;
 
-        var limitVal = parseInt(document.getElementById('respondentLimit').value) || null;
+        var respondentLimits = readRespondentLimitInputs();
         var testId = crypto.randomUUID();
 
         btn.disabled = true; btn.textContent = 'Завантаження зображень…';
@@ -2977,14 +3121,14 @@ create policy "delete videos"
 
           btn.textContent = 'Створення…';
           var screening = collectScreening();
-          var tasksData = screening.length ? { screening: screening, tasks: tasks } : tasks;
+          var tasksData = buildTasksData(tasks, screening, currentDevice, respondentLimits);
           var deviceLabel = currentDevice === 'both' ? '🖥📱 ' : currentDevice === 'mobile' ? '📱 ' : '🖥 ';
           var result = await SB.post('/rest/v1/tests', {
             id: testId,
             name: deviceLabel + (name || 'Тест скріншотів'),
             url: '__screenshots__',
             tasks: tasksData,
-            respondent_limit: limitVal
+            respondent_limit: null
           });
           var test = result[0];
           var cfg = { t: test.id, s: SB.url, k: SB.key, d: currentDevice };
@@ -3103,8 +3247,10 @@ create policy "delete videos"
       if (!rows.length) { closedScreen.style.display = 'flex'; return; }
       testData = rows[0];
 
+      var testConfig = getTestConfig(testData);
+
       // Device check
-      var requiredDevice = cfg.d || 'both'; // 'desktop' | 'mobile' | 'both'
+      var requiredDevice = cfg.d || testConfig.device || 'both'; // 'desktop' | 'mobile' | 'both'
       var wrongDeviceScreen = $('wrongDeviceScreen');
       if (requiredDevice !== 'both') {
         var needsMobile = requiredDevice === 'mobile';
@@ -3120,14 +3266,8 @@ create policy "delete videos"
       }
 
       // Parse tasks — may be wrapped with screening
-      var raw = testData.tasks;
-      if (Array.isArray(raw)) {
-        tasks = raw;
-        screening = [];
-      } else {
-        tasks = raw.tasks || [];
-        screening = raw.screening || [];
-      }
+      tasks = testConfig.tasks;
+      screening = testConfig.screening;
 
       var isScreenshot = testData.url === '__screenshots__';
 
@@ -3142,9 +3282,20 @@ create policy "delete videos"
       }
 
       // Check limit
-      if (testData.respondent_limit) {
+      if (testConfig.hasPerDeviceLimits) {
+        var participantDevice = isMobile ? 'mobile' : 'desktop';
+        var activeLimit = participantDevice === 'mobile' ? testConfig.respondentLimits.mobile : testConfig.respondentLimits.desktop;
+        if (activeLimit) {
+          sb.get('/rest/v1/responses?test_id=eq.' + cfg.t + '&device=eq.' + participantDevice + '&select=id').then(function(resps) {
+            if (resps.length >= activeLimit) closedScreen.style.display = 'flex';
+            else startFlow();
+          }).catch(function() { startFlow(); });
+        } else {
+          startFlow();
+        }
+      } else if (testConfig.legacyLimit) {
         sb.get('/rest/v1/responses?test_id=eq.' + cfg.t + '&select=id').then(function(resps) {
-          if (resps.length >= testData.respondent_limit) closedScreen.style.display = 'flex';
+          if (resps.length >= testConfig.legacyLimit) closedScreen.style.display = 'flex';
           else startFlow();
         }).catch(function() { startFlow(); });
       } else {
