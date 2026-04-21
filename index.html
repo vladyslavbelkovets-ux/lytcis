@@ -2085,12 +2085,12 @@ create policy "delete videos"
         var convTimer = null;
         var autoSaveWhenReady = false;
 
-        // WebM fallback button — visible only while MP4 is in progress
+        // WebM button — always visible until MP4 is ready
         var webmBtn = document.createElement('button');
         webmBtn.className = 'btn-download-video';
-        webmBtn.style.cssText = 'display:none;font-size:12px;padding:5px 10px;color:#888;background:#f8f8f8;border-color:#ddd;';
+        webmBtn.style.cssText = 'font-size:12px;padding:5px 10px;color:#888;background:#f8f8f8;border-color:#ddd;';
         webmBtn.textContent = '⬇ WebM';
-        webmBtn.title = 'Завантажити оригінал (WebM) поки конвертується MP4';
+        webmBtn.title = 'Завантажити оригінал (WebM)';
         dlBtn.after(webmBtn);
         webmBtn.onclick = function() { window.open(url, '_blank'); };
 
@@ -2107,9 +2107,9 @@ create policy "delete videos"
         function onState(status, s) {
           stopTimer();
           if (status === 'queued') { dlBtn.textContent = '⏳ В черзі…'; showWebmBtn(true); }
-          else if (status === 'fetching') { dlBtn.textContent = '⏳ Завантаження відео…'; showWebmBtn(true); }
+          else if (status === 'fetching') { dlBtn.textContent = '⏳ Завантаження…'; showWebmBtn(true); }
           else if (status === 'converting') {
-            showWebmBtn(true);
+            showWebmBtn(true);  // keep WebM visible during conversion
             var start = (s && s.startTime) || Date.now();
             var tick = function() {
               var sec = Math.round((Date.now() - start) / 1000);
