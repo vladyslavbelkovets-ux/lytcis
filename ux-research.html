@@ -404,6 +404,7 @@
     display: none; /* shown on mobile only */
     background: none; border: none; color: rgba(255,255,255,.5); cursor: pointer;
     padding: 4px 6px; border-radius: 6px; transition: color .15s; flex-shrink: 0;
+    align-items: center; gap: 5px; font-size: 11px; font-weight: 700; letter-spacing: .02em;
   }
   .overlay-collapse-btn:hover { color: #fff; }
   .overlay-collapse-btn svg { display: block; }
@@ -1252,8 +1253,9 @@ create policy "delete videos"
       <div class="spacer"></div>
       <div class="rec-indicator"><div class="rec-dot idle" id="recDot"></div><span id="timer">00:00</span></div>
       <span class="task-counter" id="taskNumber"></span>
-      <button class="overlay-collapse-btn" id="overlayCollapseBtn" title="Згорнути">
+      <button class="overlay-collapse-btn" id="overlayCollapseBtn" title="Collapse panel" aria-label="Collapse panel">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
+        <span>Collapse</span>
       </button>
     </div>
     <div class="overlay-body">
@@ -3531,7 +3533,7 @@ create policy "delete videos"
         // Swap content for mobile
         if (isMobile) {
           $('instruction2Text').innerHTML =
-            'Tap the <strong>arrow</strong> to collapse the panel into a small floating button. ' +
+            'Tap <strong>Collapse</strong> to turn the panel into a small floating button. ' +
             'You can also <strong>drag it</strong> anywhere on the screen so it doesn\'t cover what you need.';
           var vid = $('instruction2Video');
           if (vid) {
